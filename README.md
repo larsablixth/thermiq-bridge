@@ -293,5 +293,5 @@ codegen/        the generators, and the Jinja2 reference renderer
 vendor/         the integration's register table and widget template
 web/index.html  the UI, embedded into the binary at build time
 tests/          parity tests against Jinja2 and against the Python integration
-addon/          Home Assistant add-on manifest and image
+addon/          Home Assistant add-on manifest (pulls the published image)
 ```

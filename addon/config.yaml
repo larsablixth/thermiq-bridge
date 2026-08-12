@@ -8,18 +8,26 @@
 # binary reads directly - so this add-on needs no shell, no bashio and no
 # wrapper script.
 name: ThermIQ Bridge
-version: "0.1.0"
+version: "0.1.1"
 slug: thermiq_bridge
 description: >-
   Thermia/Danfoss heat pump over MQTT with its own web UI, JSON API and
   Prometheus metrics. Runs beside Home Assistant rather than inside it.
 url: https://github.com/larsablixth/thermiq-bridge
-# No `image:` key on purpose. Its absence is what tells the Supervisor to
-# build addon/Dockerfile locally from source. Setting it to null instead
-# fails schema validation outright - the add-on then never appears in the
-# store, with the reason visible only in the supervisor log:
-#   Can't read .../addon/config.yaml: Expected a non-empty string for
-#   docker image, got: None for dictionary value @ data['image']
+# The Supervisor pulls this image and tags it with `version:` above, so
+# ghcr must carry a bare `0.1.1` tag as well as `v0.1.1` - release.yaml
+# publishes both.
+#
+# It does NOT build locally. A local build is not actually possible from
+# this repository layout: the Supervisor uses the *add-on directory* as the
+# Docker build context, not the repository root, so a Dockerfile here can
+# never reach ../src or ../Makefile. That was the original intent and it
+# failed with "/src: not found". Two things had to be true before this
+# add-on could install at all, and neither was:
+#   - `image: null` is not "no image", it is an invalid one, and the whole
+#     add-on is dropped from the store with only a supervisor WARNING
+#   - the build context is addon/, so building from source cannot work here
+image: ghcr.io/larsablixth/thermiq-bridge
 
 arch:
   - aarch64

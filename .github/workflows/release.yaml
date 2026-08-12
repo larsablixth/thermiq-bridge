@@ -34,9 +34,13 @@ jobs:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Version matches the add-on manifest
+        id: version
         run: |
           tag="${{ github.event.inputs.tag || github.ref_name }}"
           version="${tag#v}"
+          # The Supervisor pulls {image}:{version-from-config.yaml}, i.e. the
+          # tag without its leading v, so that tag has to exist too.
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           addon=$(grep -E '^version:' addon/config.yaml | cut -d'"' -f2)
           echo "tag=$version addon/config.yaml=$addon"
           if [ "$version" != "$addon" ]; then
@@ -115,6 +119,7 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE }}:${{ github.event.inputs.tag || github.ref_name }}
+            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.IMAGE }}:latest
           # A scratch image with one file in it should stay that way; the
           # attestation layers would be larger than the program.
