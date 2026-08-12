@@ -1,0 +1,6 @@
+# Makes this repository installable in Home Assistant:
+# Settings -> Add-ons -> Add-on store -> the three-dot menu -> Repositories,
+# then paste https://github.com/larsablixth/thermiq-bridge
+name: ThermIQ Bridge
+url: https://github.com/larsablixth/thermiq-bridge
+maintainer: larsablixth
