@@ -129,10 +129,10 @@ starts holds a configuration that cannot fail later.
 | Variable | Default | What it does |
 |---|---|---|
 | `THERMIQ_MQTT_HOST` | *required* | Broker address. Not required with `THERMIQ_DEMO=1`. |
-| `THERMIQ_MQTT_PORT` | `1883` | |
-| `THERMIQ_MQTT_USERNAME` | *(none)* | |
-| `THERMIQ_MQTT_PASSWORD` | *(none)* | |
-| `THERMIQ_MQTT_CLIENT_ID` | `thermiq-bridge-<id>` | |
+| `THERMIQ_MQTT_PORT` | `1883` | Broker port. |
+| `THERMIQ_MQTT_USERNAME` | *(none)* | Set both this and the password if your broker requires a login - Mosquitto does by default under Home Assistant. |
+| `THERMIQ_MQTT_PASSWORD` | *(none)* | See above. Omit both for an anonymous broker. |
+| `THERMIQ_MQTT_CLIENT_ID` | `thermiq-bridge-<id>` | Worth setting only if another bridge on the same broker would otherwise share it: two clients with one id disconnect each other in a loop. |
 | `THERMIQ_NODE` | `ThermIQ/ThermIQ-mqtt` | Topic prefix, **without** `/data`. The single most common thing to get wrong. |
 | `THERMIQ_ID` | `vp1` | Identifies this pump. Lowercase letters, digits, underscores. |
 | `THERMIQ_LANGUAGE` | `en` | Register names: `en`, `se`, `fi`, `no`, `de`. |

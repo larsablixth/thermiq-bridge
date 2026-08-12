@@ -147,6 +147,51 @@ footer a { color: inherit; }
 
 <script>
 "use strict";
+
+/* ---- <ha-icon> ------------------------------------------------------------
+ * The widget markup is Home Assistant's, byte for byte - that is the point of
+ * the parity test - and it contains <ha-icon icon="mdi:home-roof">. Inside
+ * Home Assistant that element is defined and draws the icon. Here nothing
+ * defined it, so the browser treated it as an unknown inline element and
+ * rendered its FALLBACK TEXT instead: the roof above the temperatures showed
+ * up as the literal word "Temp", and the EVU indicator as "EVU".
+ *
+ * Defining the element here fixes it without touching the markup, which keeps
+ * the bridge and the integration rendering identically. Drawing into a shadow
+ * root also hides the fallback text, since light-DOM children are not slotted.
+ *
+ * Paths are Material Design Icons (Apache-2.0), inlined rather than fetched so
+ * the page keeps working with no network and no CDN.
+ */
+const MDI_PATHS = {
+  "mdi:home-roof": "M19 16H22L12 7L2 16H5L12 9.69L19 16M7 8.81V7H4V11.5L7 8.81Z",
+  "mdi:flash": "M7,2V13H10V22L17,10H13L17,2H7Z",
+  "mdi:alert-circle": "M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z",
+  "mdi:stop": "M18,18H6V6H18V18Z",
+};
+
+if (!customElements.get("ha-icon")) {
+  customElements.define(
+    "ha-icon",
+    class extends HTMLElement {
+      static get observedAttributes() { return ["icon"]; }
+      connectedCallback() { this._render(); }
+      attributeChangedCallback() { this._render(); }
+      _render() {
+        const path = MDI_PATHS[this.getAttribute("icon") || ""];
+        if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+        if (!path) { this.shadowRoot.innerHTML = ""; return; }
+        /* --mdc-icon-size is what the widget sizes these with; 24px is the
+         * Material default and the same fallback Home Assistant uses. */
+        this.shadowRoot.innerHTML =
+          '<svg part="icon" viewBox="0 0 24 24" ' +
+          'style="width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px);' +
+          'display:block;fill:currentColor;">' +
+          '<path d="' + path + '"></path></svg>';
+      }
+    }
+  );
+}
 /* Every URL here is relative on purpose. Home Assistant's ingress serves this
  * page under /api/hassio_ingress/<token>/, where an absolute /api/state would
  * leave the add-on entirely; relative paths resolve correctly both there and

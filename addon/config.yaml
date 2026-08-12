@@ -8,14 +8,14 @@
 # binary reads directly - so this add-on needs no shell, no bashio and no
 # wrapper script.
 name: ThermIQ Bridge
-version: "0.1.5"
+version: "0.1.6"
 slug: thermiq_bridge
 description: >-
   Thermia/Danfoss heat pump over MQTT with its own web UI, JSON API and
   Prometheus metrics. Runs beside Home Assistant rather than inside it.
 url: https://github.com/larsablixth/thermiq-bridge
 # The Supervisor pulls this image and tags it with `version:` above, so
-# ghcr must carry a bare `0.1.5` tag as well as `v0.1.5` - release.yaml
+# ghcr must carry a bare `0.1.6` tag as well as `v0.1.6` - release.yaml
 # publishes both.
 #
 # It does NOT build locally. A local build is not actually possible from
