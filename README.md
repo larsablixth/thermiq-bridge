@@ -15,7 +15,7 @@ it, this installs as an add-on and appears in your sidebar - see
 [below](#as-a-home-assistant-add-on).
 
 ```
-docker run --rm -p 8080:8080 -e THERMIQ_DEMO=1 thermiq-bridge
+docker run --rm -p 8080:8080 -e THERMIQ_DEMO=1 ghcr.io/larsablixth/thermiq-bridge
 ```
 
 Open <http://localhost:8080/> and you get the whole thing running on canned
@@ -58,13 +58,15 @@ Grafana. Every numeric register is exported as
 ### Docker
 
 ```bash
-docker build -t thermiq-bridge .
 docker run -d --name thermiq -p 8080:8080 \
   -e THERMIQ_MQTT_HOST=192.168.1.10 \
   -e THERMIQ_NODE=ThermIQ/ThermIQ-mqtt \
   --restart unless-stopped \
-  thermiq-bridge
+  ghcr.io/larsablixth/thermiq-bridge:latest
 ```
+
+Published for `amd64`, `arm64` and `armv7`. To build it yourself instead,
+`docker build -t thermiq-bridge .`
 
 There is a [docker-compose.yml](docker-compose.yml) with the same thing plus
 the hardening flags (`read_only`, `cap_drop: ALL`, `no-new-privileges`) - all of
@@ -98,6 +100,12 @@ The add-on is the same bridge, not a Home Assistant integration: it does not
 create entities in Home Assistant. If that is what you want, install
 [the integration](https://github.com/larsablixth/thermiq_mqtt-ha) instead - or
 both, since they read the same MQTT and only this one writes.
+
+### A single binary, no Docker
+
+Static binaries for `amd64`, `arm64` and `armv7` are attached to every
+[release](https://github.com/larsablixth/thermiq-bridge/releases). Download
+one, `chmod +x`, run it - there is nothing to install alongside it.
 
 ### From source
 

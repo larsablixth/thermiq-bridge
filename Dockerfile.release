@@ -1,0 +1,37 @@
+# Release image: a prebuilt static binary, and nothing else.
+#
+# The binaries are cross-compiled on the runner (see .github/workflows/
+# release.yaml) rather than compiled inside an emulated container, so building
+# for three architectures costs three `zig cc` invocations instead of three
+# QEMU-emulated Alpine toolchains.
+#
+# buildx sets TARGETARCH and TARGETVARIANT per platform, which is how one
+# Dockerfile picks the right binary:
+#   linux/amd64    -> amd64      linux/arm64 -> arm64      linux/arm/v7 -> armv7
+#
+# Dockerfile is the one to use for a local build from source; this one exists
+# only to package what CI already built.
+FROM scratch
+
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+LABEL org.opencontainers.image.title="thermiq-bridge" \
+      org.opencontainers.image.description="Thermia/Danfoss heat pump over MQTT: web UI, JSON API and Prometheus metrics" \
+      org.opencontainers.image.source="https://github.com/larsablixth/thermiq-bridge" \
+      org.opencontainers.image.licenses="MIT"
+
+COPY dist/thermiq-bridge-${TARGETARCH}${TARGETVARIANT} /thermiq-bridge
+
+# Nobody. There is no passwd file here, so this is numeric; the process needs
+# no filesystem, no user and no privileges of any kind.
+USER 65534:65534
+
+ENV THERMIQ_HTTP_PORT=8080
+EXPOSE 8080
+
+# No shell and no curl to probe with, so the binary probes itself.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+    CMD ["/thermiq-bridge", "--healthcheck"]
+
+ENTRYPOINT ["/thermiq-bridge"]

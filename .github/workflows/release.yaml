@@ -1,0 +1,152 @@
+name: Release
+
+# Tag a version and this publishes it:
+#
+#   git tag -a v0.1.0 -m "..." && git push origin v0.1.0
+#
+# The tag must match the version in addon/config.yaml - checked below, because
+# an add-on that reports a different version than the release it came from is
+# the kind of thing nobody notices until they are debugging something else.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)publish"
+        required: true
+
+permissions:
+  contents: write # create the release and attach binaries
+  packages: write # push to ghcr.io
+
+env:
+  ZIG_VERSION: "0.16.0"
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Version matches the add-on manifest
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          addon=$(grep -E '^version:' addon/config.yaml | cut -d'"' -f2)
+          echo "tag=$version addon/config.yaml=$addon"
+          if [ "$version" != "$addon" ]; then
+            echo "::error::tag $tag does not match addon/config.yaml version $addon"
+            exit 1
+          fi
+
+      # Same tests that gate every commit. A release that skips them is a
+      # release nobody checked.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Test
+        run: |
+          python3 -m pip install jinja2
+          make test
+
+      - name: Cache zig
+        id: zig
+        uses: actions/cache@v4
+        with:
+          path: ~/zig
+          key: zig-${{ env.ZIG_VERSION }}-x86_64-linux
+      - name: Install zig
+        if: steps.zig.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/zig
+          curl -sSL "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" \
+            | tar xJ -C ~/zig --strip-components=1
+
+      # Cross-compiled here, then packaged by buildx below. Compiling three
+      # architectures natively takes seconds; doing it under QEMU takes
+      # minutes and buys nothing.
+      - name: Build static binaries
+        run: |
+          mkdir -p dist
+          for spec in "amd64:x86_64-linux-musl" \
+                      "arm64:aarch64-linux-musl" \
+                      "armv7:arm-linux-musleabihf"; do
+            name=${spec%%:*}
+            target=${spec#*:}
+            make clean
+            make CC="$HOME/zig/zig cc" TARGET="$target" \
+              LDFLAGS="-static -Wl,--gc-sections"
+            file build/thermiq-bridge | grep -q "statically linked"
+            mv build/thermiq-bridge "dist/thermiq-bridge-$name"
+          done
+          ls -l dist/
+
+      - name: Smoke-test the native binary
+        run: |
+          THERMIQ_DEMO=1 THERMIQ_HTTP_PORT=8080 ./dist/thermiq-bridge-amd64 &
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:8080/healthz > /dev/null && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/healthz
+          # The release binary must serve the same widget the tests verified.
+          curl -fsS http://127.0.0.1:8080/api/widget > /tmp/served.html
+          cmp /tmp/served.html tests/expected/demo.html
+          echo "widget identical: $(wc -c < /tmp/served.html) bytes"
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.release
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.event.inputs.tag || github.ref_name }}
+            ${{ env.IMAGE }}:latest
+          # A scratch image with one file in it should stay that way; the
+          # attestation layers would be larger than the program.
+          provenance: false
+          sbom: false
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: dist/thermiq-bridge-*
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            ```bash
+            docker run -d --name thermiq -p 8080:8080 \
+              -e THERMIQ_MQTT_HOST=192.168.1.10 \
+              -e THERMIQ_NODE=ThermIQ/ThermIQ-mqtt \
+              --restart unless-stopped \
+              ${{ env.IMAGE }}:${{ github.event.inputs.tag || github.ref_name }}
+            ```
+
+            Or without Docker: download the binary for your architecture below,
+            `chmod +x` it, and run it. They are static, so there is nothing to
+            install alongside them.
+
+            Or in Home Assistant: add this repository under *Settings → Add-ons
+            → Add-on store → ⋮ → Repositories* and install **ThermIQ Bridge**.
+
+            Try it with no broker and no heat pump:
+
+            ```bash
+            docker run --rm -p 8080:8080 -e THERMIQ_DEMO=1 ${{ env.IMAGE }}:latest
+            ```

@@ -5,9 +5,9 @@
 # The UI is then on http://<host>:8080/
 services:
   thermiq:
-    build: .
-    # Or, once you have pushed an image somewhere:
-    # image: ghcr.io/larsablixth/thermiq-bridge:latest
+    image: ghcr.io/larsablixth/thermiq-bridge:latest
+    # Or build it yourself:
+    # build: .
     container_name: thermiq
     restart: unless-stopped
     ports:
