@@ -72,6 +72,10 @@ struct mqtt_client {
     double next_attempt;
     double backoff;
     double last_rx;
+    /* Keepalive is about what we SEND. MQTT 3.1.2.10 obliges the client to
+     * transmit something within the interval; a broker that is publishing to
+     * us constantly still disconnects us for saying nothing back. */
+    double last_tx;
     double last_ping;
     bool ping_outstanding;
 

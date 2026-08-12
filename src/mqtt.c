@@ -506,6 +506,7 @@ static void write_pending(struct mqtt_client *client)
             return;
         }
         client->tx_sent += (size_t)sent;
+        client->last_tx = now_monotonic();
     }
     client->tx_len = 0;
     client->tx_sent = 0;
@@ -530,6 +531,7 @@ void mqtt_service(struct mqtt_client *client, bool readable, bool writable)
         }
         client->phase = MQTT_CONNECTING;
         client->last_rx = now;
+        client->last_tx = now;
         return;
     }
 
@@ -577,7 +579,12 @@ void mqtt_service(struct mqtt_client *client, bool readable, bool writable)
             mqtt_close(client, "no PINGRESP from the broker");
             return;
         }
-        if (!client->ping_outstanding && now - client->last_rx > keepalive / 2.0) {
+        /* Measured from the last thing we sent, not the last thing we heard.
+         * Gating this on last_rx meant a pump publishing every 30 s kept the
+         * client convinced the link was healthy while the broker, hearing
+         * nothing from us at all, dropped the connection on schedule - once
+         * every three minutes, for as long as it ran. */
+        if (!client->ping_outstanding && now - client->last_tx > keepalive / 2.0) {
             send_pingreq(client);
             write_pending(client);
         }
