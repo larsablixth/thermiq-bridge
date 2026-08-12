@@ -349,6 +349,11 @@ static void handle_publish(struct mqtt_client *client, unsigned char header,
         return;
     size_t offset = 2 + topic_len;
 
+    static char topic[MQTT_TOPIC_MAX];
+    size_t copied = topic_len < sizeof(topic) - 1 ? topic_len : sizeof(topic) - 1;
+    memcpy(topic, body + 2, copied);
+    topic[copied] = '\0';
+
     unsigned char qos = (header >> 1) & 0x03;
     if (qos > 0) {
         if (offset + 2 > length)
@@ -371,7 +376,7 @@ static void handle_publish(struct mqtt_client *client, unsigned char header,
     memcpy(payload, body + offset, payload_len);
     payload[payload_len] = '\0';
     if (client->on_message)
-        client->on_message(client->user, payload, payload_len);
+        client->on_message(client->user, topic, payload, payload_len);
 }
 
 static void handle_packet(struct mqtt_client *client, unsigned char header,

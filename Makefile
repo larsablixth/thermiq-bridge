@@ -22,7 +22,8 @@ CFLAGS += -target $(TARGET)
 LDFLAGS += -target $(TARGET)
 endif
 
-SRC := src/main.c src/config.c src/http.c src/json.c src/mqtt.c src/registers.c \
+SRC := src/main.c src/config.c src/discover.c src/http.c src/json.c src/mqtt.c \
+       src/registers.c \
        src/registers_gen.c src/state.c src/util.c src/widget.c src/widget_gen.c \
        src/assets_gen.c
 LIB := $(filter-out src/main.c,$(SRC))
@@ -50,6 +51,9 @@ check-generated:
 	$(PYTHON) codegen/gen_registers.py --check
 	$(PYTHON) codegen/gen_widget.py --check
 	$(PYTHON) codegen/gen_assets.py --check
+	# The runbook in AI_INSTALL.md is followed literally by an agent, so a
+	# variable that does not exist is worse there than a missing one.
+	$(PYTHON) codegen/check_docs.py
 
 # The widget cases are rendered by real Jinja2; the C renderer must match them
 # byte for byte. That is what makes transpiling the template safe.
@@ -69,6 +73,10 @@ test: | $(BUILD)
 	$(CC) $(CFLAGS) -Isrc -Itests -o $(BUILD)/test_config \
 	    $(LIB) tests/test_config.c $(LDFLAGS) $(LDLIBS)
 	$(BUILD)/test_config
+	# End to end over a real socket speaking real MQTT, which the unit
+	# tests never touch.
+	$(MAKE) $(BIN)
+	sh tests/test_mqtt.sh $(BIN)
 
 run-demo: $(BIN)
 	THERMIQ_DEMO=1 $(BIN)

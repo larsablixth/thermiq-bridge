@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "discover.h"
 #include "http.h"
 #include "mqtt.h"
 #include "registers.h"
@@ -136,9 +137,10 @@ static void seed_demo(void)
 
 /* ---- MQTT callback ------------------------------------------------------ */
 
-static void on_mqtt_message(void *user, char *payload, size_t len)
+static void on_mqtt_message(void *user, const char *topic, char *payload, size_t len)
 {
     (void)user;
+    (void)topic;
     int stored = state_ingest(&pump, payload, len);
     if (stored < 0)
         return;
@@ -206,8 +208,10 @@ int main(int argc, char **argv)
 {
     if (argc > 1 && strcmp(argv[1], "--healthcheck") == 0)
         return run_healthcheck();
-    if (argc > 1) {
-        fprintf(stderr, "usage: thermiq-bridge [--healthcheck]\n"
+
+    bool discover = argc > 1 && strcmp(argv[1], "--discover") == 0;
+    if (argc > 1 && !discover) {
+        fprintf(stderr, "usage: thermiq-bridge [--discover | --healthcheck]\n"
                         "everything else is configured through the environment; "
                         "see the README\n");
         return 2;
@@ -219,6 +223,16 @@ int main(int argc, char **argv)
         return 2;
     }
     log_set_level((enum log_level)config.log_level);
+
+    if (discover) {
+        /* Finding the pump needs a broker and nothing else. */
+        if (!config.mqtt_host[0]) {
+            fprintf(stderr, "--discover needs THERMIQ_MQTT_HOST\n");
+            return 2;
+        }
+        signal(SIGPIPE, SIG_IGN);
+        return discover_run(&config);
+    }
     log_info("thermiq-bridge starting");
     config_log_summary(&config);
 

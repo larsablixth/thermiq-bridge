@@ -55,6 +55,11 @@ Grafana. Every numeric register is exported as
 
 ## Installing
 
+**In a hurry?** [Let an AI agent do it](AI_INSTALL.md) — it finds your pump on
+the broker, picks the install route that suits the machine, and checks real
+values are arriving before it says it is done. That page also spells out
+exactly what access it needs.
+
 ### Docker
 
 ```bash
@@ -139,28 +144,40 @@ starts holds a configuration that cannot fail later.
 | `THERMIQ_HTTP_PORT` | `8080` | |
 | `THERMIQ_AVAILABILITY_TIMEOUT` | `120` | Seconds of silence before values are shown as stale. |
 | `THERMIQ_DEMO` | `false` | Serve canned values; do not connect to a broker. |
+| `THERMIQ_DISCOVER_SECONDS` | `45` | How long `--discover` listens. Only used by that mode. |
 | `THERMIQ_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. |
 
 ### Finding your node name
 
-The pump publishes to `<node>/data` every 30 seconds or so. If you do not know
-what `<node>` is, subscribe to everything and look:
+`THERMIQ_NODE` is the one setting nobody can look up and nearly everybody gets
+wrong - and a wrong one looks exactly like broken hardware, because the bridge
+connects, subscribes, and simply never hears anything. So it finds it for you:
 
 ```bash
-mosquitto_sub -h 192.168.1.10 -t '#' -v | grep -i thermiq
+docker run --rm -e THERMIQ_MQTT_HOST=192.168.1.10 \
+  ghcr.io/larsablixth/thermiq-bridge --discover
 ```
 
-The topic that ends in `/data` is what you want, minus the `/data`.
+```
+Found 1 heat pump:
+
+  THERMIQ_NODE=ThermIQ/ThermIQ-mqtt
+  THERMIQ_HEXFORMAT=false
+    device ThermIQ_abc123, 2 messages in 45s, 61 registers, decimal (dNNN) keys
+```
+
+It listens to the whole broker for 45 seconds, publishes nothing, and prints
+the two settings that cannot be guessed. Exit codes: `0` found a pump, `1`
+reached the broker but saw none, `2` could not reach the broker.
 
 ### Decimal or hex?
 
-Look at the payload keys on that topic. Keys like `d000`, `d001` mean current
-firmware - leave `THERMIQ_HEXFORMAT` alone. Keys like `r00`, `r01` mean the old
-1.xx firmware; set it to `true`. Reads work either way; the setting only
-controls the key format used when *writing*, which is why it has to match.
-
-If controls appear to do nothing while the sensors are fine, this is the first
-thing to check.
+`--discover` answers this too, from the register keys the pump actually sends:
+`d000`-style means current firmware and `THERMIQ_HEXFORMAT=false`; `r00`-style
+means the old 1.xx firmware and `true`. Reads work either way - the setting
+only controls the key format used when *writing*, which is why it has to
+match. If controls appear to do nothing while the sensors are fine, this is
+the first thing to check.
 
 ## How it stays honest
 

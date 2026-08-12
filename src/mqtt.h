@@ -41,8 +41,10 @@ enum mqtt_phase {
 };
 
 /* Called for each message on the subscribed topic. `payload` is writable and
- * has one spare byte, so the decoder can work in place. */
-typedef void (*mqtt_on_message)(void *user, char *payload, size_t len);
+ * has one spare byte, so the decoder can work in place. `topic` matters only
+ * to discovery mode, which subscribes to everything. */
+typedef void (*mqtt_on_message)(void *user, const char *topic, char *payload,
+                                size_t len);
 
 struct mqtt_queued {
     char topic[MQTT_TOPIC_MAX];

@@ -26,6 +26,9 @@ jobs:
       # src/*_gen.c is generated from vendor/. Editing the vendored table or
       # template without regenerating would leave the bridge decoding and
       # drawing the old version, which is exactly the failure this catches.
+      # It also checks the docs against the code: AI_INSTALL.md is followed
+      # literally by an agent, so an environment variable named there that no
+      # longer exists is worse than one that is missing.
       - run: python3 -m pip install jinja2
       - run: make check-generated
 
@@ -39,8 +42,9 @@ jobs:
         with:
           python-version: "3.x"
       - run: python3 -m pip install jinja2
-      # Renders the widget cases through real Jinja2, then requires the
-      # generated C renderer to reproduce them byte for byte.
+      # Renders the widget cases through real Jinja2 and requires the
+      # generated C renderer to reproduce them byte for byte; then drives the
+      # real binary against a fake broker over real MQTT.
       - name: Tests
         run: make test
       - name: Build
