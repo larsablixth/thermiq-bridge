@@ -452,14 +452,15 @@ void widget_render(struct buf *out, const char *const *state)
     }
     buf_add(out,
         "</svg></div> <div class=\"hpwidget-val\" title=\"Time\" style=\"position:absolute;top:303px;left:20px;wid"
-        "th:150px;z-index:3;\">   <span class=\"hpwidget-name-span\" id=\"hpwidget-timestamp_d\">"
-        , 183);
+        "th:auto;height:auto;white-space:nowrap;padding:0 4px;z-index:3;\"><span class=\"hpwidget-name-span\" id"
+        "=\"hpwidget-timestamp_d\">"
+        , 224);
     buf_str(out, state[17]);
     buf_add(out,
-        "</span><span class=\"hpwidget-unit-span\"></span></span></div> <div class=\"hpwidget-val\" title=\"Brine "
-        "in\" style=\"position:absolute;top:84px;left:8px;z-index:3;\">           <span class=\"hpwidget-name-spa"
-        "n\" id=\"hpwidget-T_BRINE_IN\">"
-        , 228);
+        "</span><span class=\"hpwidget-unit-span\"></span></div> <div class=\"hpwidget-val\" title=\"Brine in\" sty"
+        "le=\"position:absolute;top:84px;left:8px;z-index:3;\">           <span class=\"hpwidget-name-span\" id=\""
+        "hpwidget-T_BRINE_IN\">"
+        , 221);
     buf_str(out, state[2]);
     buf_add(out,
         "</span><span class=\"hpwidget-unit-span\">&deg;C</span></div> <div class=\"hpwidget-val\" title=\"Brine o"
