@@ -186,9 +186,12 @@ static void test_entity_strings(void)
     CHECK_STR(text, "off");
     entity(&state, "select", "main_mode", text, sizeof(text));
     CHECK_STR(text, "2 - Heatpump only");
-    /* A register that never arrived is unknown, not zero */
+    /* A register that never arrived is unavailable, not zero and not
+     * unknown: messages are flowing and this one has never been in any of
+     * them, so the hardware does not have it. "unknown" would suggest a value
+     * is still coming. */
     entity(&state, "sensor", "hgw_water_t", text, sizeof(text));
-    CHECK_STR(text, "unknown");
+    CHECK_STR(text, "unavailable");
 }
 
 static void test_select_options_translate(void)
@@ -219,7 +222,12 @@ static struct pump_state writable_state(void)
 {
     struct pump_state state;
     state_init(&state, 120.0, 0);
-    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"r00\": 1}");
+    /* A ThermIQ-Room2 reporting everything. Writes are only accepted for
+     * registers the pump actually sends, so a fixture that reports one
+     * register can only ever test the refusal path. */
+    ingest(&state,
+           "{\"Client_Name\": \"ThermIQ_x\", \"EVU\": 0, \"INDR_T\": 21.0, "
+           "\"d0\": 1, \"d1\": 1, \"d2\": 1, \"d3\": 1, \"d4\": 1, \"d5\": 1, \"d6\": 1, \"d7\": 1, \"d8\": 1, \"d9\": 1, \"d10\": 1, \"d11\": 1, \"d12\": 1, \"d13\": 1, \"d14\": 1, \"d15\": 1, \"d16\": 1, \"d17\": 1, \"d18\": 1, \"d19\": 1, \"d20\": 1, \"d21\": 1, \"d22\": 1, \"d23\": 1, \"d24\": 1, \"d25\": 1, \"d26\": 1, \"d27\": 1, \"d28\": 1, \"d29\": 1, \"d30\": 1, \"d31\": 1, \"d32\": 1, \"d33\": 1, \"d34\": 1, \"d35\": 1, \"d36\": 1, \"d37\": 1, \"d38\": 1, \"d39\": 1, \"d40\": 1, \"d41\": 1, \"d42\": 1, \"d43\": 1, \"d44\": 1, \"d45\": 1, \"d46\": 1, \"d47\": 1, \"d48\": 1, \"d49\": 1, \"d50\": 1, \"d51\": 1, \"d52\": 1, \"d53\": 1, \"d54\": 1, \"d55\": 1, \"d56\": 1, \"d57\": 1, \"d58\": 1, \"d59\": 1, \"d60\": 1, \"d61\": 1, \"d62\": 1, \"d63\": 1, \"d64\": 1, \"d65\": 1, \"d66\": 1, \"d67\": 1, \"d68\": 1, \"d69\": 1, \"d70\": 1, \"d71\": 1, \"d72\": 1, \"d73\": 1, \"d74\": 1, \"d75\": 1, \"d76\": 1, \"d77\": 1, \"d78\": 1, \"d79\": 1, \"d80\": 1, \"d81\": 1, \"d82\": 1, \"d83\": 1, \"d84\": 1, \"d85\": 1, \"d86\": 1, \"d87\": 1, \"d88\": 1, \"d89\": 1, \"d90\": 1, \"d91\": 1, \"d92\": 1, \"d93\": 1, \"d94\": 1, \"d95\": 1, \"d96\": 1, \"d97\": 1, \"d98\": 1, \"d99\": 1, \"d100\": 1, \"d101\": 1, \"d102\": 1, \"d103\": 1, \"d104\": 1, \"d105\": 1, \"d106\": 1, \"d107\": 1, \"d108\": 1, \"d109\": 1, \"d110\": 1, \"d111\": 1, \"d112\": 1, \"d113\": 1, \"d114\": 1, \"d115\": 1, \"d116\": 1, \"d117\": 1, \"d118\": 1, \"d119\": 1, \"d120\": 1, \"d121\": 1, \"d122\": 1, \"d123\": 1, \"d124\": 1, \"d125\": 1, \"d126\": 1, \"d127\": 1}");
     return state;
 }
 
@@ -356,6 +364,53 @@ static void test_number_formatting_matches_python(void)
     CHECK_STR(out, "0.0");
 }
 
+/* ---- capability detection ------------------------------------------- */
+/* EVU is ThermIQ-Room2 only; the room-sensor setpoint needs a Room or a
+ * Room2. The pump says which it is by what it puts in /data - confirmed by
+ * ThermIQ: "the mqtt message will only contain EVU or INDR_T if it's
+ * supported by the hw". */
+
+static struct pump_state plain_mqtt_state(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    /* Plain ThermIQ-MQTT: registers, but never EVU or INDR_T. */
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"d0\": 21, \"d50\": 15}");
+    return state;
+}
+
+static void test_plain_hardware_refuses_writes_it_cannot_perform(void)
+{
+    struct pump_state state = plain_mqtt_state();
+    struct write_topics t = topics(false);
+    struct write_message message;
+    CHECK(state_encode_write(&state, &t, "heatpump_evu_block", 1, &message)
+          == WRITE_UNSUPPORTED);
+    CHECK(state_encode_write(&state, &t, "room_sensor_set_t", 21.0, &message)
+          == WRITE_UNSUPPORTED);
+    /* ...while a register it does report is writable as before */
+    CHECK(state_encode_write(&state, &t, "indoor_requested_t", 21, &message) == WRITE_OK);
+}
+
+static void test_room2_accepts_the_writes_plain_hardware_cannot(void)
+{
+    struct pump_state state = writable_state();
+    struct write_topics t = topics(false);
+    struct write_message message;
+    CHECK(state_encode_write(&state, &t, "heatpump_evu_block", 1, &message) == WRITE_OK);
+    CHECK(state_encode_write(&state, &t, "room_sensor_set_t", 21.0, &message) == WRITE_OK);
+}
+
+static void test_unsupported_register_reads_as_unavailable(void)
+{
+    struct pump_state state = plain_mqtt_state();
+    char text[STATE_STRING_MAX];
+    entity(&state, "switch", "heatpump_evu_block", text, sizeof(text));
+    CHECK_STR(text, "unavailable");
+    entity(&state, "number", "room_sensor_set_t", text, sizeof(text));
+    CHECK_STR(text, "unavailable");
+}
+
 int main(void)
 {
     test_message_populates_state_and_combines_decimals();
@@ -380,6 +435,9 @@ int main(void)
     test_write_room_sensor_keeps_its_fraction();
     test_debug_writes_divert_to_dbg_topics();
     test_number_formatting_matches_python();
+    test_plain_hardware_refuses_writes_it_cannot_perform();
+    test_room2_accepts_the_writes_plain_hardware_cannot();
+    test_unsupported_register_reads_as_unavailable();
 
     if (failures) {
         fprintf(stderr, "%d of %d checks failed\n", failures, checks);

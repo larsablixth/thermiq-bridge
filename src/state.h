@@ -93,6 +93,11 @@ enum write_error {
     WRITE_UNKNOWN_OPTION,
     WRITE_NO_DATA,
     WRITE_READ_ONLY,
+    /* The pump has been talking, and has never once mentioned this register.
+     * EVU is ThermIQ-Room2 only and the room-sensor setpoint needs a Room or
+     * a Room2; on plain ThermIQ-MQTT hardware a write to either is published
+     * and then ignored, which is worse than refusing it. */
+    WRITE_UNSUPPORTED,
 };
 
 const char *write_error_message(enum write_error error);

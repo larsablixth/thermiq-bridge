@@ -299,7 +299,10 @@ void state_entity_string(const struct pump_state *state, const char *domain,
 
     const struct reg_value *value = state_value(state, def);
     if (!value || value->kind == VAL_NONE) {
-        snprintf(out, cap, "unknown");
+        /* Messages are arriving and this register has never been in one, so
+         * the hardware does not have it. "unavailable" says that; "unknown"
+         * suggests a value is coming, and none ever will. */
+        snprintf(out, cap, "unavailable");
         return;
     }
 
@@ -372,6 +375,9 @@ const char *write_error_message(enum write_error error)
         return "no data received from the heatpump yet";
     case WRITE_READ_ONLY:
         return "the bridge is running in read-only mode";
+    case WRITE_UNSUPPORTED:
+        return "this heat pump does not report that register, so it cannot "
+               "drive it (EVU needs a ThermIQ-Room2)";
     }
     return "rejected";
 }
@@ -393,6 +399,13 @@ enum write_error state_encode_write(const struct pump_state *state,
         return WRITE_NO_DATA;
     if (reg_slot_of(def->reg) < 0)
         return WRITE_UNKNOWN_REGISTER;
+    /* What the pump sends is what it can act on. A register absent from every
+     * message so far belongs to hardware this pump does not have. */
+    {
+        const struct reg_value *seen = state_value(state, def);
+        if (!state->demo && (!seen || seen->kind == VAL_NONE))
+            return WRITE_UNSUPPORTED;
+    }
 
     /* Validate the raw value, before the two's-complement conversion below:
      * a negative setpoint becomes a large positive number once masked, which
