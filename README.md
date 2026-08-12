@@ -167,8 +167,8 @@ units, bounds, bitmasks and five languages - and emits `src/registers_gen.c`.
 CI regenerates and fails if the checked-in file differs.
 
 **The two files it generates from are vendored, not rewritten.** They live
-under `vendor/` with the upstream commit they came from recorded in
-[vendor/SOURCE.md](vendor/SOURCE.md). Living in a separate repository means
+under `vendor/` with the commit they came from, and who wrote them, recorded
+in [vendor/SOURCE.md](vendor/SOURCE.md). Living in a separate repository means
 those copies can fall behind, which would be the quiet kind of wrong - so a
 weekly CI job fetches both from the integration and fails if they have
 diverged. Drift becomes a red build rather than a surprise in February.

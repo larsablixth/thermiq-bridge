@@ -4,9 +4,15 @@ Copyright (c) 2020 @ThermIQ, www.thermiq.net
 Copyright (c) 2026 larsablixth
 
 This project is derived from the ThermIQ Home Assistant integration
-(https://github.com/ThermIQ/thermiq_mqtt-ha). Its register definitions and its
-heat-pump widget template are ThermIQ's work, vendored here under vendor/ and
-used to generate this program's source; see vendor/SOURCE.md.
+(https://github.com/ThermIQ/thermiq_mqtt-ha). Two of its files are vendored
+here under vendor/ and used to generate this program's source:
+
+  vendor/thermiq_regs.py       the register definitions, originally ThermIQ's,
+                               with later corrections and additions from the
+                               fork at github.com/larsablixth/thermiq_mqtt-ha
+  vendor/heatpump_widget.j2    the animated widget, written for that fork
+
+See vendor/SOURCE.md.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

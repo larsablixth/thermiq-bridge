@@ -1,13 +1,14 @@
 # Vendored sources
 
-These two files are **not written here**. They are copies from the Home
-Assistant integration this bridge is derived from, and everything under
-`src/*_gen.c` is generated from them:
+These two files are **not written here**. They are copies from
+[larsablixth/thermiq_mqtt-ha](https://github.com/larsablixth/thermiq_mqtt-ha),
+the Home Assistant integration this bridge is derived from, and everything
+under `src/*_gen.c` is generated from them:
 
-| File | Generates |
-|---|---|
-| `thermiq_regs.py` | `src/registers_gen.c` - registers, units, bounds, bitmasks, names |
-| `heatpump_widget.j2` | `src/widget_gen.c` - the animated widget renderer |
+| File | Generates | Origin |
+|---|---|---|
+| `thermiq_regs.py` | `src/registers_gen.c` - registers, units, bounds, bitmasks, names | ThermIQ's, with later corrections in the fork |
+| `heatpump_widget.j2` | `src/widget_gen.c` - the animated widget renderer | written for the fork; it has no upstream counterpart |
 
 Do not edit them here. Edit them upstream, then re-vendor and regenerate:
 
