@@ -1,5 +1,6 @@
 #include "config.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,8 +68,18 @@ static void options_load(const char *path)
     options.source[0] = '\0';
 
     FILE *file = fopen(path, "rb");
-    if (!file)
-        return; /* not an add-on, or no options yet: not an error */
+    if (!file) {
+        /* Absent is the normal case: not running as an add-on. Anything else
+         * - unreadable because the container runs as a user that cannot read
+         * a root-owned file, most likely - looks identical from here and used
+         * to be swallowed in the same silence, surfacing much later as
+         * "THERMIQ_MQTT_HOST is required" with the options sitting right
+         * there on disk. */
+        if (errno != ENOENT)
+            log_warn("cannot read %s (%s); add-on options ignored", path,
+                     strerror(errno));
+        return;
+    }
 
     size_t length = fread(options.source, 1, sizeof(options.source) - 1, file);
     bool complete = feof(file);

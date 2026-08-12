@@ -193,11 +193,16 @@ docker run -d --name thermiq \
   -e THERMIQ_NODE=ThermIQ/ThermIQ-mqtt \
   --restart unless-stopped \
   --read-only --cap-drop ALL --security-opt no-new-privileges \
+  --user 65534:65534 \
   ghcr.io/larsablixth/thermiq-bridge:latest
 ```
 
 The hardening flags are not decoration — the process needs no filesystem, no
 user and no privileges, so it satisfies all of them. Keep them.
+
+`--user` is a flag here rather than a `USER` line in the image, because the
+same image runs as a Home Assistant add-on, where it must read the
+root-owned `/data/options.json` the Supervisor writes for it.
 
 If the broker needs a password, write a `docker-compose.yml` instead so the
 credential is in a file rather than in the process list. There is one in the

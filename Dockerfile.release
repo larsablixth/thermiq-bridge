@@ -23,9 +23,16 @@ LABEL org.opencontainers.image.title="thermiq-bridge" \
 
 COPY dist/thermiq-bridge-${TARGETARCH}${TARGETVARIANT} /thermiq-bridge
 
-# Nobody. There is no passwd file here, so this is numeric; the process needs
-# no filesystem, no user and no privileges of any kind.
-USER 65534:65534
+# No USER here, deliberately. As a Home Assistant add-on this same image has
+# to read /data/options.json, which the Supervisor writes as root - running as
+# 65534 meant the options were unreadable, the loader treated that as "not an
+# add-on", and the container died with "THERMIQ_MQTT_HOST is required" while
+# the settings sat on disk beside it.
+#
+# The program still needs no privileges: it opens one socket, reads two files
+# and never writes. Under plain docker, drop them explicitly if you want to:
+#
+#   docker run --user 65534:65534 --read-only ghcr.io/larsablixth/thermiq-bridge
 
 ENV THERMIQ_HTTP_PORT=8080
 EXPOSE 8080
