@@ -14,7 +14,12 @@ description: >-
   Thermia/Danfoss heat pump over MQTT with its own web UI, JSON API and
   Prometheus metrics. Runs beside Home Assistant rather than inside it.
 url: https://github.com/larsablixth/thermiq-bridge
-image: null
+# No `image:` key on purpose. Its absence is what tells the Supervisor to
+# build addon/Dockerfile locally from source. Setting it to null instead
+# fails schema validation outright - the add-on then never appears in the
+# store, with the reason visible only in the supervisor log:
+#   Can't read .../addon/config.yaml: Expected a non-empty string for
+#   docker image, got: None for dictionary value @ data['image']
 
 arch:
   - aarch64
