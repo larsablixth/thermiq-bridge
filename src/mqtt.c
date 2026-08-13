@@ -253,17 +253,19 @@ bool mqtt_publish(struct mqtt_client *client, const char *topic, const char *pay
     return true;
 }
 
+/* Sends at most one message: publishes go out one at a time, so a PUBACK
+ * always acknowledges the head of the queue and never has to be matched
+ * against several in flight. Called again on each ack. */
 static void drain_queue(struct mqtt_client *client)
 {
-    while (client->queue_count > 0 && client->phase == MQTT_READY) {
-        struct mqtt_queued *message = &client->queue[client->queue_head];
-        if (message->in_flight)
-            return; /* one at a time, so an ack always means the oldest */
-        if (!send_publish(client, message))
-            return; /* no room in the write buffer; try again next turn */
-        log_info("mqtt: publishing %s to %s", message->payload, message->topic);
+    if (client->queue_count == 0 || client->phase != MQTT_READY)
         return;
-    }
+    struct mqtt_queued *message = &client->queue[client->queue_head];
+    if (message->in_flight)
+        return;
+    if (!send_publish(client, message))
+        return; /* no room in the write buffer; try again next turn */
+    log_info("mqtt: publishing %s to %s", message->payload, message->topic);
 }
 
 static void ack_queue_head(struct mqtt_client *client, uint16_t packet_id)
@@ -443,24 +445,33 @@ static void handle_packet(struct mqtt_client *client, unsigned char header,
 
 static void read_available(struct mqtt_client *client)
 {
+    /* Deferred rather than taken immediately: bytes already in the buffer are
+     * complete packets the broker did send, and returning here to close would
+     * throw them away. It reads as harmless - the pump repeats itself every
+     * 30 s - but it means the message before every disconnect is silently the
+     * one message that never arrived. Parse first, close after. */
+    const char *closed = NULL;
+    bool buffer_full = false;
+
     for (;;) {
         if (client->rx_len >= MQTT_RX_MAX) {
-            mqtt_close(client, "receive buffer full");
-            return;
+            closed = "receive buffer full";
+            buffer_full = true;
+            break;
         }
         ssize_t got = recv(client->fd, client->rx + client->rx_len,
                            MQTT_RX_MAX - client->rx_len, 0);
         if (got == 0) {
-            mqtt_close(client, "broker closed the connection");
-            return;
+            closed = "broker closed the connection";
+            break;
         }
         if (got < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 break;
             if (errno == EINTR)
                 continue;
-            mqtt_close(client, strerror(errno));
-            return;
+            closed = strerror(errno);
+            break;
         }
         client->rx_len += (size_t)got;
         client->last_rx = now_monotonic();
@@ -494,7 +505,14 @@ static void read_available(struct mqtt_client *client)
     if (consumed > 0) {
         memmove(client->rx, client->rx + consumed, client->rx_len - consumed);
         client->rx_len -= consumed;
+        /* A full buffer only means we are stuck if nothing in it could be
+         * parsed. Whole packets came out, so the room they freed is enough to
+         * keep going. */
+        if (buffer_full)
+            closed = NULL;
     }
+    if (closed)
+        mqtt_close(client, closed);
 }
 
 static void write_pending(struct mqtt_client *client)
