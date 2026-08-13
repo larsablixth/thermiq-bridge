@@ -103,13 +103,12 @@ void widget_render(struct buf *out, const char *const *state)
         "<style>  .hpwidget-val {width:35px;height:16px;font-size:13px;line-height:16px;background:#a0a0a0;te"
         "xt-align: center;color:white;border-radius: 0.25em;} .hpwidget-vald {width:45px;height:16px;font-siz"
         "e:13px;line-height:16px;background:#ffffff;text-align: center;color:black;border-radius: 0.25em;} .h"
-        "pwidget-name-span{}.hpwidget-unit-span,.hpwidget-unit-spand{text-align:right;overflow:hidden;color:v"
-        "ar(--primary-text-color,#222);font-size:70%} @media (prefers-color-scheme: dark) { .hpwidget-vald {w"
-        "idth:45px;height:16px;background:none;text-align: center;color:white;border-radius: 0.25em;}   .hpwi"
-        "dget-val {width:35px;height:16px;background:#a0a0a0;text-align: center;color:black;border-radius: 0."
-        "25em;} }    @keyframes blink { to {visibility: hidden;}} </style>\012<div style=\"height:330px;width:100"
-        "%;"
-        , 802);
+        "pwidget-name-span{}.hpwidget-unit-span,.hpwidget-unit-spand{text-align:right;overflow:hidden;font-si"
+        "ze:70%} @media (prefers-color-scheme: dark) { .hpwidget-vald {width:45px;height:16px;background:none"
+        ";text-align: center;color:white;border-radius: 0.25em;}   .hpwidget-val {width:35px;height:16px;back"
+        "ground:#a0a0a0;text-align: center;color:black;border-radius: 0.25em;} }    @keyframes blink { to {vi"
+        "sibility: hidden;}} </style>\012<div style=\"height:330px;width:100%;"
+        , 765);
     if ((strcmp(state[0], "on") == 0)) {
         buf_add(out, "background-color:red;", 21);
     }
@@ -613,7 +612,7 @@ void widget_render(struct buf *out, const char *const *state)
     }
     buf_add(out,
         "\">EVU</ha-icon> </div> <div class=\"hpwidget-vald\" title=\"Indoor Temperature\" style=\"position:absolut"
-        "e;top:64px;left: 221px;z-index:2;\"><span class=\"hpwidget-name-span\" id=\"hpwidget-INDR_T\"></span>"
+        "e;top:72px;left: 221px;z-index:2;\"><span class=\"hpwidget-name-span\" id=\"hpwidget-INDR_T\"></span>"
         , 196);
     buf_str(out, state[27]);
     buf_add(out,
