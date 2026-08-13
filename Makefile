@@ -8,35 +8,48 @@ CC ?= cc
 PYTHON ?= python3
 TARGET ?=
 
-CFLAGS ?= -Os -std=c11 -D_POSIX_C_SOURCE=200809L \
-          -Wall -Wextra -Wshadow -Wconversion -Wsign-conversion \
-          -Wstrict-prototypes -Wmissing-prototypes -Wcast-qual -Wpointer-arith \
-          -fno-common -ffunction-sections -fdata-sections
-# Hardening: stack protector and fortified libc calls. _FORTIFY_SOURCE is left
-# alone under SAN=1 below - the sanitizers predefine it to 0 and check the same
-# calls more thoroughly, so setting it here only produces a redefinition
-# warning on every file.
-CFLAGS += -fstack-protector-strong
+# The warning set is not optional and not a preference: it is the only review
+# this program gets that does not involve a person. It therefore lives in its
+# own variable rather than in CFLAGS - CFLAGS is the caller's to set (CI and
+# the cross builds both do), and a plain `CFLAGS=-O2 make` must not silently
+# take the warnings and the hardening away with it.
+WARNINGS := -Wall -Wextra -Wshadow -Wconversion -Wsign-conversion \
+            -Wstrict-prototypes -Wmissing-prototypes -Wcast-qual -Wpointer-arith
+HARDENING := -fstack-protector-strong
+# The sanitizers predefine _FORTIFY_SOURCE to 0 and check the same calls more
+# thoroughly, so setting it under SAN=1 only warns about the redefinition.
 ifneq ($(SAN),1)
-CFLAGS += -D_FORTIFY_SOURCE=2
+HARDENING += -D_FORTIFY_SOURCE=2
 endif
+
+# CFLAGS and LDFLAGS belong to whoever runs make. Everything this program
+# requires goes in ALL_CFLAGS/ALL_LDFLAGS, which the recipes use - a variable
+# set on the command line overrides a makefile's `+=` entirely, so appending to
+# CFLAGS would mean `make CFLAGS=-O2` quietly dropped the warnings, the
+# hardening, -std=c11 and the sanitizers along with them.
+CFLAGS ?= -Os
+LDLIBS ?= -lm
+
+ALL_CFLAGS = -std=c11 -D_POSIX_C_SOURCE=200809L -fno-common \
+             -ffunction-sections -fdata-sections \
+             $(WARNINGS) $(HARDENING) $(CFLAGS) $(EXTRA_CFLAGS)
+ALL_LDFLAGS = $(LDFLAGS) $(EXTRA_LDFLAGS)
 
 # _POSIX_C_SOURCE above asks for strict POSIX, and macOS honours that by
 # hiding anything BSD-flavoured - INADDR_LOOPBACK among it. The target is
 # Linux either way, but a program the maintainer cannot build on the laptop in
 # front of them is a program that only CI can tell you about.
 ifeq ($(shell uname -s),Darwin)
-CFLAGS += -D_DARWIN_C_SOURCE
+ALL_CFLAGS += -D_DARWIN_C_SOURCE
 # Apple's linker spells --gc-sections -dead_strip.
 LDFLAGS ?= -Wl,-dead_strip
 else
 LDFLAGS ?= -Wl,--gc-sections
 endif
-LDLIBS ?= -lm
 
 ifneq ($(TARGET),)
-CFLAGS += -target $(TARGET)
-LDFLAGS += -target $(TARGET)
+ALL_CFLAGS += -target $(TARGET)
+ALL_LDFLAGS += -target $(TARGET)
 endif
 
 # `make test SAN=1` runs the same tests under AddressSanitizer and
@@ -48,9 +61,9 @@ endif
 # -fno-sanitize-recover matters: UBSan's default is to print and carry on, so
 # without it a signed overflow leaves a line in the log and a green build.
 ifeq ($(SAN),1)
-CFLAGS += -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
-          -fno-sanitize-recover=all
-LDFLAGS += -fsanitize=address,undefined
+ALL_CFLAGS += -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
+              -fno-sanitize-recover=all
+ALL_LDFLAGS += -fsanitize=address,undefined
 endif
 
 SRC := src/main.c src/config.c src/discover.c src/http.c src/json.c src/mqtt.c \
@@ -67,7 +80,7 @@ BIN := $(BUILD)/thermiq-bridge
 all: $(BIN)
 
 $(BIN): $(SRC) | $(BUILD)
-	$(CC) $(CFLAGS) -Isrc -o $@ $(SRC) $(LDFLAGS) $(LDLIBS)
+	$(CC) $(ALL_CFLAGS) -Isrc -o $@ $(SRC) $(ALL_LDFLAGS) $(LDLIBS)
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -90,19 +103,19 @@ check-generated:
 # byte for byte. That is what makes transpiling the template safe.
 test: | $(BUILD)
 	$(PYTHON) codegen/gen_widget_cases.py
-	$(CC) $(CFLAGS) -Isrc -Itests -o $(BUILD)/test_widget \
+	$(CC) $(ALL_CFLAGS) -Isrc -Itests -o $(BUILD)/test_widget \
 	    src/util.c src/widget.c src/widget_gen.c \
-	    tests/test_widget.c tests/widget_cases_gen.c $(LDFLAGS) $(LDLIBS)
+	    tests/test_widget.c tests/widget_cases_gen.c $(ALL_LDFLAGS) $(LDLIBS)
 	$(BUILD)/test_widget tests/expected
-	$(CC) $(CFLAGS) -Isrc -Itests -o $(BUILD)/test_state \
+	$(CC) $(ALL_CFLAGS) -Isrc -Itests -o $(BUILD)/test_state \
 	    src/util.c src/json.c src/registers.c src/registers_gen.c src/state.c \
-	    src/widget.c src/widget_gen.c tests/test_state.c $(LDFLAGS) $(LDLIBS)
+	    src/widget.c src/widget_gen.c tests/test_state.c $(ALL_LDFLAGS) $(LDLIBS)
 	$(BUILD)/test_state
-	$(CC) $(CFLAGS) -Isrc -Itests -o $(BUILD)/test_http \
-	    $(LIB) tests/test_http.c $(LDFLAGS) $(LDLIBS)
+	$(CC) $(ALL_CFLAGS) -Isrc -Itests -o $(BUILD)/test_http \
+	    $(LIB) tests/test_http.c $(ALL_LDFLAGS) $(LDLIBS)
 	$(BUILD)/test_http
-	$(CC) $(CFLAGS) -Isrc -Itests -o $(BUILD)/test_config \
-	    $(LIB) tests/test_config.c $(LDFLAGS) $(LDLIBS)
+	$(CC) $(ALL_CFLAGS) -Isrc -Itests -o $(BUILD)/test_config \
+	    $(LIB) tests/test_config.c $(ALL_LDFLAGS) $(LDLIBS)
 	$(BUILD)/test_config
 	# End to end over a real socket speaking real MQTT, which the unit
 	# tests never touch.

@@ -144,10 +144,12 @@ static const char *parse_string(struct parser *p)
 
 static bool parse_value(struct parser *p, struct json_member *member, int depth);
 
-/* Consumes a value without storing it. */
+/* Consumes a value without storing it. parse_value only writes to its member,
+ * never reads it, but zeroing costs nothing and keeps the compiler from having
+ * to prove that. */
 static bool skip_value(struct parser *p, int depth)
 {
-    struct json_member ignored;
+    struct json_member ignored = {0};
     return parse_value(p, &ignored, depth);
 }
 
