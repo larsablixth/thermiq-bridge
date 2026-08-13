@@ -1,5 +1,6 @@
 #include "util.h"
 
+#include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -225,4 +226,12 @@ double now_monotonic(void)
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
         return 0.0;
     return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
+}
+
+bool set_nonblocking(int fd)
+{
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0)
+        return false;
+    return fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0;
 }

@@ -298,10 +298,15 @@ static int connect_socket(struct mqtt_client *client)
 
     int fd = -1;
     for (struct addrinfo *candidate = results; candidate; candidate = candidate->ai_next) {
-        fd = socket(candidate->ai_family, candidate->ai_socktype | SOCK_NONBLOCK,
-                    candidate->ai_protocol);
+        fd = socket(candidate->ai_family, candidate->ai_socktype, candidate->ai_protocol);
         if (fd < 0)
             continue;
+        /* Before connect(), so the connect itself does not block the loop. */
+        if (!set_nonblocking(fd)) {
+            close(fd);
+            fd = -1;
+            continue;
+        }
         int one = 1;
         setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
         if (connect(fd, candidate->ai_addr, candidate->ai_addrlen) == 0 ||

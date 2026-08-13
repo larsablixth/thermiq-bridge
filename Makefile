@@ -12,14 +12,45 @@ CFLAGS ?= -Os -std=c11 -D_POSIX_C_SOURCE=200809L \
           -Wall -Wextra -Wshadow -Wconversion -Wsign-conversion \
           -Wstrict-prototypes -Wmissing-prototypes -Wcast-qual -Wpointer-arith \
           -fno-common -ffunction-sections -fdata-sections
-# Hardening: stack protector and fortified libc calls.
-CFLAGS += -fstack-protector-strong -D_FORTIFY_SOURCE=2
+# Hardening: stack protector and fortified libc calls. _FORTIFY_SOURCE is left
+# alone under SAN=1 below - the sanitizers predefine it to 0 and check the same
+# calls more thoroughly, so setting it here only produces a redefinition
+# warning on every file.
+CFLAGS += -fstack-protector-strong
+ifneq ($(SAN),1)
+CFLAGS += -D_FORTIFY_SOURCE=2
+endif
+
+# _POSIX_C_SOURCE above asks for strict POSIX, and macOS honours that by
+# hiding anything BSD-flavoured - INADDR_LOOPBACK among it. The target is
+# Linux either way, but a program the maintainer cannot build on the laptop in
+# front of them is a program that only CI can tell you about.
+ifeq ($(shell uname -s),Darwin)
+CFLAGS += -D_DARWIN_C_SOURCE
+# Apple's linker spells --gc-sections -dead_strip.
+LDFLAGS ?= -Wl,-dead_strip
+else
 LDFLAGS ?= -Wl,--gc-sections
+endif
 LDLIBS ?= -lm
 
 ifneq ($(TARGET),)
 CFLAGS += -target $(TARGET)
 LDFLAGS += -target $(TARGET)
+endif
+
+# `make test SAN=1` runs the same tests under AddressSanitizer and
+# UndefinedBehaviorSanitizer. The warning set above is a review of the source;
+# this is a review of what it does when it runs. Every buffer in this program
+# is fixed and bounded, which is a claim until something checks the bounds
+# against real input - and the input here is a JSON payload off the network.
+#
+# -fno-sanitize-recover matters: UBSan's default is to print and carry on, so
+# without it a signed overflow leaves a line in the log and a green build.
+ifeq ($(SAN),1)
+CFLAGS += -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
+          -fno-sanitize-recover=all
+LDFLAGS += -fsanitize=address,undefined
 endif
 
 SRC := src/main.c src/config.c src/discover.c src/http.c src/json.c src/mqtt.c \

@@ -502,9 +502,15 @@ bool http_start(struct http_server *server, const struct config *config,
         server->connections[i].response = server->response_storage[i];
     }
 
-    server->listen_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    server->listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server->listen_fd < 0) {
         log_error("http: socket: %s", strerror(errno));
+        return false;
+    }
+    if (!set_nonblocking(server->listen_fd)) {
+        log_error("http: cannot set O_NONBLOCK: %s", strerror(errno));
+        close(server->listen_fd);
+        server->listen_fd = -1;
         return false;
     }
     int one = 1;
@@ -571,8 +577,7 @@ void http_service_listener(struct http_server *server)
             close(fd);
             continue;
         }
-        int flags = fcntl(fd, F_GETFL, 0);
-        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+        set_nonblocking(fd);
         int one = 1;
         setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 

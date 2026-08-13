@@ -12,6 +12,14 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <sys/socket.h>
+
+/* Linux suppresses SIGPIPE per-send with MSG_NOSIGNAL; it does not exist on
+ * macOS or the BSDs. Everything that sends here also ignores SIGPIPE for the
+ * whole process (main.c), so falling back to 0 costs nothing. */
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
 
 /* ---- bounded output buffer ------------------------------------------- */
 
@@ -68,6 +76,12 @@ void log_msg(enum log_level level, const char *fmt, ...)
 
 /* Monotonic seconds since an arbitrary origin; never goes backwards. */
 double now_monotonic(void);
+
+/* Puts a socket into non-blocking mode. Linux can do this in socket() with
+ * SOCK_NONBLOCK, which is a Linux extension and not in POSIX - using it meant
+ * the program did not compile on macOS or the BSDs at all, and CI runs only
+ * on Linux, so nothing said so. */
+bool set_nonblocking(int fd);
 
 /* Median of three, which is how the widget template clamps a temperature. */
 static inline double median3(double a, double b, double c)
