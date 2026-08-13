@@ -60,13 +60,21 @@ static void finish_body(struct buf *out, struct buf *body, int status,
     buf_add(out, body->data, body->len);
 }
 
+/* Every caller passes a literal or a write_error_message(), so nothing here
+ * needs escaping today. It is escaped anyway: an error string is the one place
+ * a caller is most likely to want to quote something the client sent, and
+ * finding out then that this built its JSON by hand would be finding out the
+ * hard way. */
 static void send_simple(struct buf *out, int status, const char *reason,
                         const char *message)
 {
-    char json[256];
-    int length = snprintf(json, sizeof(json), "{\"error\": \"%s\"}\n", message);
-    begin_response(out, status, reason, "application/json", (size_t)length);
-    buf_add(out, json, (size_t)length);
+    char json[512];
+    struct buf body = buf_wrap(json, sizeof(json));
+    buf_str(&body, "{\"error\": ");
+    buf_json_string(&body, message);
+    buf_str(&body, "}\n");
+    begin_response(out, status, reason, "application/json", body.len);
+    buf_add(out, body.data, body.len);
 }
 
 /* ---- JSON writers ----------------------------------------------------- */
@@ -222,12 +230,11 @@ static void route_registers(struct buf *out, const struct http_server *server)
 static void route_widget(struct buf *out, const struct http_server *server)
 {
     static char storage[HTTP_RESPONSE_MAX];
-    static char scratch[64 * STATE_STRING_MAX];
-    const char *states[64];
+    static struct widget_states states;
 
     struct buf body = buf_wrap(storage, sizeof(storage));
-    state_widget_states(server->state, states, scratch, sizeof(scratch));
-    widget_render(&body, states);
+    state_widget_states(server->state, &states);
+    widget_render(&body, states.entries);
     finish_body(out, &body, 200, "OK", "text/html; charset=utf-8");
 }
 
@@ -365,9 +372,22 @@ static void route_write(struct buf *out, struct http_server *server, char *body,
 
 /* ---- request handling ------------------------------------------------- */
 
+/* Length of the response's header block, terminator included. begin_response
+ * always writes one, so a response without it is one we did not build. */
+static size_t header_end(const struct buf *out)
+{
+    for (size_t i = 0; i + 4 <= out->len; i++)
+        if (memcmp(out->data + i, "\r\n\r\n", 4) == 0)
+            return i + 4;
+    return out->len;
+}
+
 static void handle_request(struct http_server *server, struct http_connection *connection)
 {
     struct buf out = buf_wrap(connection->response, HTTP_RESPONSE_MAX);
+    /* Declared before the first `goto done` below, which would otherwise jump
+     * past its initialiser and leave it indeterminate. */
+    bool is_head = false;
 
     char *request = connection->request;
     char *space = strchr(request, ' ');
@@ -387,7 +407,11 @@ static void handle_request(struct http_server *server, struct http_connection *c
     *path_end = '\0';
     (void)terminator;
 
-    bool is_get = strcmp(method, "GET") == 0 || strcmp(method, "HEAD") == 0;
+    /* HEAD is routed exactly as GET so that its headers - Content-Length in
+     * particular - are the ones the GET would have sent. The body is dropped
+     * at the end rather than never generated. */
+    is_head = strcmp(method, "HEAD") == 0;
+    bool is_get = strcmp(method, "GET") == 0 || is_head;
     log_debug("http %s %s", method, path);
 
     if (is_get && strcmp(path, "/api/state") == 0) {
@@ -428,6 +452,8 @@ done:
         buf_reset(&out);
         send_simple(&out, 500, "Internal Server Error", "response too large");
     }
+    if (is_head)
+        out.len = header_end(&out);
     connection->response_len = out.len;
     connection->response_sent = 0;
 }

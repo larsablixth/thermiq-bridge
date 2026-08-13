@@ -327,15 +327,15 @@ void state_entity_string(const struct pump_state *state, const char *domain,
     state_format_value(value, out, cap);
 }
 
-void state_widget_states(const struct pump_state *state, const char **out, char *scratch,
-                         size_t scratch_cap)
+void state_widget_states(const struct pump_state *state, struct widget_states *out)
 {
+    /* Both come from the generator, so this cannot drift; it is here to say so
+     * out loud, and to fail the build rather than the run if it ever does. */
+    _Static_assert(sizeof(out->entries) / sizeof(out->entries[0]) == WIDGET_ENTITY_MAX,
+                   "widget state array does not match the generated entity table");
+
     for (int i = 0; i < WIDGET_ENTITY_COUNT; i++) {
-        char *slot = scratch + (size_t)i * STATE_STRING_MAX;
-        if ((size_t)(i + 1) * STATE_STRING_MAX > scratch_cap) {
-            out[i] = "unknown";
-            continue;
-        }
+        char *slot = out->storage[i];
         const struct widget_entity *entity = &WIDGET_ENTITIES[i];
         if (entity->is_demo_switch) {
             snprintf(slot, STATE_STRING_MAX, "%s", state->demo ? "on" : "off");
@@ -346,7 +346,7 @@ void state_widget_states(const struct pump_state *state, const char **out, char 
             state_entity_string(state, entity->domain, reg_find(entity->key), slot,
                                 STATE_STRING_MAX);
         }
-        out[i] = slot;
+        out->entries[i] = slot;
     }
 }
 

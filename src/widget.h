@@ -11,6 +11,7 @@
 #include <stdbool.h>
 
 #include "util.h"
+#include "widget_gen.h"
 
 /* An entity the template reads. `key` is the register key for entities this
  * bridge provides, or NULL for the demo switch and for entities that belong
@@ -23,6 +24,8 @@ struct widget_entity {
 };
 
 extern const struct widget_entity WIDGET_ENTITIES[];
+/* Equals WIDGET_ENTITY_MAX. Use the macro to size an array; this is only for
+ * loop bounds, where a const int reads better than a macro. */
 extern const int WIDGET_ENTITY_COUNT;
 
 /* A dynamically typed value. Only macro parameters and one mixed-branch

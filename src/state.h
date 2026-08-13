@@ -16,6 +16,7 @@
 #include <stdint.h>
 
 #include "registers.h"
+#include "widget_gen.h"
 
 /* Longest informational string kept (time, vp_read, app_info). */
 #define VALUE_TEXT_MAX 64
@@ -75,10 +76,17 @@ void state_format_value(const struct reg_value *value, char *out, size_t cap);
 void state_entity_string(const struct pump_state *state, const char *domain,
                          const struct reg_def *def, char *out, size_t cap);
 
-/* Fill the widget's entity-state array. `scratch` backs the strings and must
- * hold WIDGET_ENTITY_COUNT * STATE_STRING_MAX bytes. */
-void state_widget_states(const struct pump_state *state, const char **out, char *scratch,
-                         size_t scratch_cap);
+/* The widget's entity states, and the storage behind them. Both arrays are
+ * sized by the generator from the template itself: the caller used to declare
+ * them by hand against a number only the generator knew, which was correct
+ * only for as long as nobody added an entity to the template. */
+struct widget_states {
+    const char *entries[WIDGET_ENTITY_MAX];
+    char storage[WIDGET_ENTITY_MAX][STATE_STRING_MAX];
+};
+
+/* Fill it. Pass `out->entries` to widget_render. */
+void state_widget_states(const struct pump_state *state, struct widget_states *out);
 
 /* ---- writes ----------------------------------------------------------- */
 
