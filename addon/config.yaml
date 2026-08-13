@@ -8,7 +8,7 @@
 # binary reads directly - so this add-on needs no shell, no bashio and no
 # wrapper script.
 name: ThermIQ Bridge
-version: "0.1.8"
+version: "0.1.9"
 slug: thermiq_bridge
 description: >-
   Thermia/Danfoss heat pump over MQTT with its own web UI, JSON API and
