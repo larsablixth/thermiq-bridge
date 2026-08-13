@@ -7,6 +7,16 @@ name: Release
 # The tag must match the version in addon/config.yaml - checked below, because
 # an add-on that reports a different version than the release it came from is
 # the kind of thing nobody notices until they are debugging something else.
+#
+# A semver pre-release tag goes down a different path:
+#
+#   git tag -a v0.2.0-beta.1 -m "..." && git push origin v0.2.0-beta.1
+#
+# That publishes the image and a GitHub pre-release, but does not move :latest
+# and requires addon/config.yaml to stay on the last STABLE version. The
+# add-on has no beta channel - the Supervisor reads config.yaml off the
+# default branch and offers it to everyone - so the only safe beta channel is
+# an image tag people opt into by name.
 on:
   push:
     tags:
@@ -33,7 +43,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
-      - name: Version matches the add-on manifest
+      - name: Work out the version, and whether this is a pre-release
         id: version
         run: |
           tag="${{ github.event.inputs.tag || github.ref_name }}"
@@ -41,9 +51,47 @@ jobs:
           # The Supervisor pulls {image}:{version-from-config.yaml}, i.e. the
           # tag without its leading v, so that tag has to exist too.
           echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # A semver pre-release tag - v0.2.0-beta.1 - ships an image and a
+          # GitHub pre-release, but must NOT move :latest and must NOT match
+          # addon/config.yaml. The add-on has no beta channel: the Supervisor
+          # reads config.yaml off the default branch and offers whatever it
+          # finds, to everybody. So config.yaml stays on the last stable
+          # version and add-on users are undisturbed, while testers pull the
+          # beta image tag directly.
+          case "$version" in
+            *-*) prerelease=true ;;
+            *)   prerelease=false ;;
+          esac
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+          # Built here rather than inline in the build step: an empty line in
+          # that list is not obviously harmless, and :latest has to disappear
+          # entirely on a pre-release. :latest is what a bare
+          # `docker run ghcr.io/...` gets and what the README tells people to
+          # use, so a beta has to be asked for by name.
+          tags="${IMAGE}:${tag}
+          ${IMAGE}:${version}"
+          if [ "$prerelease" = "false" ]; then
+            tags="$tags
+          ${IMAGE}:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
           addon=$(grep -E '^version:' addon/config.yaml | cut -d'"' -f2)
-          echo "tag=$version addon/config.yaml=$addon"
-          if [ "$version" != "$addon" ]; then
+          echo "tag=$version addon/config.yaml=$addon prerelease=$prerelease"
+          if [ "$prerelease" = "true" ]; then
+            if [ "$version" = "$addon" ]; then
+              echo "::error::$tag is a pre-release, so addon/config.yaml must stay"
+              echo "::error::on the last stable version - it is $addon"
+              exit 1
+            fi
+            echo "pre-release: leaving the add-on on $addon"
+          elif [ "$version" != "$addon" ]; then
             echo "::error::tag $tag does not match addon/config.yaml version $addon"
             exit 1
           fi
@@ -117,10 +165,7 @@ jobs:
           file: Dockerfile.release
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: |
-            ${{ env.IMAGE }}:${{ github.event.inputs.tag || github.ref_name }}
-            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
-            ${{ env.IMAGE }}:latest
+          tags: ${{ steps.version.outputs.tags }}
           # A scratch image with one file in it should stay that way; the
           # attestation layers would be larger than the program.
           provenance: false
@@ -132,6 +177,8 @@ jobs:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: dist/thermiq-bridge-*
           generate_release_notes: true
+          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
+          make_latest: ${{ steps.version.outputs.prerelease == 'false' }}
           body: |
             ## Install
 
@@ -153,5 +200,10 @@ jobs:
             Try it with no broker and no heat pump:
 
             ```bash
-            docker run --rm -p 8080:8080 -e THERMIQ_DEMO=1 ${{ env.IMAGE }}:latest
+            docker run --rm -p 8080:8080 -e THERMIQ_DEMO=1 \
+              ${{ env.IMAGE }}:${{ github.event.inputs.tag || github.ref_name }}
             ```
+
+            Pre-releases are tagged by name and never move `:latest`, and the
+            add-on stays on the last stable version - so a beta has to be asked
+            for explicitly, by the tag above.
