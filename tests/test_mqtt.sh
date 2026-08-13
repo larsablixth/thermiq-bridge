@@ -89,6 +89,28 @@ check "the pump is reported available" \
     "$(printf '%s' "$state" | python3 -c "import json,sys;print(json.load(sys.stdin)['status']['available'])")" \
     "True"
 
+# ---- HTTP behaviour that only shows up over a real socket -----------------
+
+# HEAD is routed as GET, so the headers must be the GET's - and the body must
+# not be there. It used to send the whole page.
+head_out=$(curl -fsS -I "http://127.0.0.1:$HTTP_PORT/api/state")
+head_len=$(printf '%s' "$head_out" | tr -d '\r' | sed -n 's/^[Cc]ontent-[Ll]ength: //p')
+get_len=$(curl -fsS "http://127.0.0.1:$HTTP_PORT/api/state" | wc -c | tr -d ' ')
+check "HEAD reports the length the GET would send" "$head_len" "$get_len"
+# -I prints headers only whatever the server sends, so count the bytes on the
+# wire instead: headers, the blank line, and nothing after it.
+raw=$(curl -fsS -o /dev/null -w '%{size_download}' --head \
+      "http://127.0.0.1:$HTTP_PORT/api/state")
+check "HEAD sends no body" "$raw" "0"
+
+# The error body is JSON built through the escaper, not by hand. No -f here:
+# these are the failure responses, and -f makes curl exit non-zero on them.
+err=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$HTTP_PORT/nope")
+check "an unknown path is 404" "$err" "404"
+parsed=$(curl -sS "http://127.0.0.1:$HTTP_PORT/nope" \
+         | python3 -c "import json,sys;print(json.load(sys.stdin)['error'])")
+check "the error body is parseable JSON" "$parsed" "no such path"
+
 if [ "$failures" -ne 0 ]; then
     echo "$failures mqtt check(s) failed" >&2
     exit 1
