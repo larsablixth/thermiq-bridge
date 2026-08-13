@@ -73,6 +73,27 @@ jobs:
             -Wstrict-prototypes -Wmissing-prototypes -Wcast-qual \
             -Wpointer-arith -fno-common -Werror"
 
+  sanitize:
+    name: Tests under ASan and UBSan
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: python3 -m pip install jinja2
+      # The strict warning set above reviews the source; this reviews the
+      # program. It covers the same four unit tests plus the end-to-end run
+      # against the fake broker, so the JSON decoder, the MQTT framing and the
+      # HTTP request scanner all see real bytes with the bounds checked.
+      #
+      # These are the three parsers reachable from off the machine, and the
+      # only thing standing between them and a fixed-size buffer is arithmetic
+      # somebody wrote by hand.
+      - name: make test SAN=1
+        run: make test SAN=1
+
   binaries:
     name: Static binaries
     if: github.event_name != 'schedule'
