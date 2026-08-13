@@ -68,7 +68,17 @@ h1 small { color: var(--muted); font-weight: 500; }
   border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px;
 }
 #widget-card { padding: 8px; overflow-x: auto; }
-#widget { position: relative; min-height: 340px; min-width: 360px; }
+#widget {
+  position: relative; min-height: 340px; min-width: 360px;
+  /* The widget markup is Home Assistant's, byte for byte, so it reaches for HA
+   * theme variables. This is the only one left: the unit spans are
+   * color:var(--primary-text-color,#222), and nothing here defined it, so they
+   * fell back to #222 - near-black on a near-black background, which is why the
+   * degree signs were invisible in dark mode. Map it onto our own ink token so
+   * it follows the page. Scoped to the widget rather than :root: an
+   * HA-namespaced name should not leak into this page's own palette. */
+  --primary-text-color: var(--ink);
+}
 
 details.card > summary {
   cursor: pointer; padding: 12px 16px; font-weight: 600; list-style: none;
