@@ -42,6 +42,9 @@ struct pump_state {
     int language;
     bool connected;
     bool demo;
+    /* The pump drives a second circuit (a pool). Lets the widget draw that
+     * branch; see widget_pool_active() in state.c. */
+    bool pool_circuit;
     char last_error[160];
 };
 

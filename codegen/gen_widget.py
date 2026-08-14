@@ -39,9 +39,15 @@ OUTPUT_H = REPO / "src/widget_gen.h"
 # Entity ids the template reads that this integration does not provide. They
 # always read as unknown, exactly as they would in a Home Assistant without
 # those entities.
-FOREIGN_ENTITIES = {"binary_sensor.pool_heating_active"}
+FOREIGN_ENTITIES: set[str] = set()
 # The template's demo switch. The bridge drives it from THERMIQ_DEMO.
 DEMO_ENTITY = "input_boolean.hpviz_demo"
+# In Home Assistant this is a template binary sensor the user defines by hand
+# (see lovelace/README.md in the integration). There is no Home Assistant here
+# to define it in, so the bridge derives it from the pump's own registers -
+# see widget_pool_active() in state.c. Gated by THERMIQ_POOL_CIRCUIT, which is
+# the bridge's equivalent of choosing to define the helper.
+POOL_ENTITY = "binary_sensor.pool_heating_active"
 
 # Value types the compiler tracks. DYN is a tagged value, used only where a
 # static type cannot be pinned down (macro parameters, and `63 if demo else
@@ -666,16 +672,19 @@ def generate() -> tuple[str, str]:
     entity_rows = []
     for entity in compiler.entities:
         domain, _, rest = entity.partition(".")
-        if entity in FOREIGN_ENTITIES or entity == DEMO_ENTITY:
-            key = "NULL"
+        if entity == DEMO_ENTITY:
+            key, source = "NULL", "WE_DEMO"
+        elif entity == POOL_ENTITY:
+            key, source = "NULL", "WE_POOL"
+        elif entity in FOREIGN_ENTITIES:
+            key, source = "NULL", "WE_FOREIGN"
         else:
             prefix = "thermiq_mqtt_vp1_"
             if not rest.startswith(prefix):
                 raise TemplateError(f"unexpected entity id in template: {entity}")
-            key = c_string(rest[len(prefix) :])
-        is_demo = "true" if entity == DEMO_ENTITY else "false"
+            key, source = c_string(rest[len(prefix) :]), "WE_REGISTER"
         entity_rows.append(
-            f"    {{{c_string(entity)}, {c_string(domain)}, {key}, {is_demo}}},"
+            f"    {{{c_string(entity)}, {c_string(domain)}, {key}, {source}}},"
         )
 
     generated = (

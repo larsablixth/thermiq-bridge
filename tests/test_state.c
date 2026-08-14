@@ -13,6 +13,7 @@
 #include "registers.h"
 #include "state.h"
 #include "util.h"
+#include "widget.h"
 
 static int failures;
 static int checks;
@@ -411,6 +412,97 @@ static void test_unsupported_register_reads_as_unavailable(void)
     CHECK_STR(text, "unavailable");
 }
 
+/* ---- the pool branch --------------------------------------------------- */
+
+/* What the widget would read for binary_sensor.pool_heating_active. In Home
+ * Assistant that is a template sensor the user writes; here it is derived. */
+static void pool_state(const struct pump_state *state, char *out, size_t cap)
+{
+    static struct widget_states states;
+    state_widget_states(state, &states);
+    for (int i = 0; i < WIDGET_ENTITY_COUNT; i++) {
+        if (strcmp(WIDGET_ENTITIES[i].id, "binary_sensor.pool_heating_active") == 0) {
+            snprintf(out, cap, "%s", states.entries[i]);
+            return;
+        }
+    }
+    snprintf(out, cap, "<no such entity>");
+}
+
+/* r10 carries all three flags: compressor 0x02, supply pump 0x04, DHW 0x08. */
+static struct pump_state pool_running_state(bool pool_circuit)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    state.pool_circuit = pool_circuit;
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"r10\": 6, \"r40\": 27}");
+    return state;
+}
+
+static void test_pool_branch_is_off_unless_configured(void)
+{
+    struct pump_state state = pool_running_state(false);
+    char text[STATE_STRING_MAX];
+    pool_state(&state, text, sizeof(text));
+    /* Every condition holds; only the opt-in is missing. */
+    CHECK_STR(text, "off");
+}
+
+static void test_pool_branch_on_when_the_circuit_is_being_heated(void)
+{
+    struct pump_state state = pool_running_state(true);
+    char text[STATE_STRING_MAX];
+    pool_state(&state, text, sizeof(text));
+    CHECK_STR(text, "on");
+}
+
+static void test_pool_branch_off_below_the_curve_minimum(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    state.pool_circuit = true;
+    char text[STATE_STRING_MAX];
+    /* 10 is the pump's "auto", i.e. the off value - not 0. */
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"r10\": 6, \"r40\": 10}");
+    pool_state(&state, text, sizeof(text));
+    CHECK_STR(text, "off");
+}
+
+static void test_pool_branch_off_while_making_hot_water(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    state.pool_circuit = true;
+    char text[STATE_STRING_MAX];
+    /* 0x0E = compressor + supply pump + hot water. The diverter valve sends
+     * the heat to the tank, so the circuit gets none of it. */
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"r10\": 14, \"r40\": 27}");
+    pool_state(&state, text, sizeof(text));
+    CHECK_STR(text, "off");
+}
+
+static void test_pool_branch_off_when_the_compressor_is_idle(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    state.pool_circuit = true;
+    char text[STATE_STRING_MAX];
+    /* 0x04 = supply pump only. Circulating, but producing nothing. */
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"r10\": 4, \"r40\": 27}");
+    pool_state(&state, text, sizeof(text));
+    CHECK_STR(text, "off");
+}
+
+static void test_pool_branch_off_before_any_data(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    state.pool_circuit = true;
+    char text[STATE_STRING_MAX];
+    pool_state(&state, text, sizeof(text));
+    CHECK_STR(text, "off");
+}
+
 int main(void)
 {
     test_message_populates_state_and_combines_decimals();
@@ -438,6 +530,12 @@ int main(void)
     test_plain_hardware_refuses_writes_it_cannot_perform();
     test_room2_accepts_the_writes_plain_hardware_cannot();
     test_unsupported_register_reads_as_unavailable();
+    test_pool_branch_is_off_unless_configured();
+    test_pool_branch_on_when_the_circuit_is_being_heated();
+    test_pool_branch_off_below_the_curve_minimum();
+    test_pool_branch_off_while_making_hot_water();
+    test_pool_branch_off_when_the_compressor_is_idle();
+    test_pool_branch_off_before_any_data();
 
     if (failures) {
         fprintf(stderr, "%d of %d checks failed\n", failures, checks);

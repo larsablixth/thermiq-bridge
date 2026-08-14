@@ -246,6 +246,7 @@ int main(int argc, char **argv)
 
     state_init(&pump, config.availability_timeout, config.language);
     pump.demo = config.demo;
+    pump.pool_circuit = config.pool_circuit;
     if (config.demo)
         seed_demo();
 

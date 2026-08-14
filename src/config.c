@@ -232,6 +232,13 @@ bool config_load(struct config *config, char *error, size_t error_cap)
     if (!parse_bool("THERMIQ_DEMO", false, &config->demo, error, error_cap))
         return false;
 
+    /* Off by default: a pump with no second circuit still reports a curve-2
+     * target, so the widget would otherwise draw a pool branch for people who
+     * have no pool. */
+    if (!parse_bool("THERMIQ_POOL_CIRCUIT", false, &config->pool_circuit, error,
+                    error_cap))
+        return false;
+
     if (!copy_env(config->id_name, sizeof(config->id_name), "THERMIQ_ID", "vp1"))
         FAIL("THERMIQ_ID is too long");
     /* The id goes into published topics and entity ids, so keep the

@@ -327,6 +327,55 @@ void state_entity_string(const struct pump_state *state, const char *domain,
     state_format_value(value, out, cap);
 }
 
+/* True while the pump is delivering heat to the second circuit right now.
+ *
+ * Home Assistant users define this as a template binary sensor by hand; the
+ * bridge has no Home Assistant, so it evaluates the same expression against
+ * the registers the pump already sends. The expression is the one documented
+ * in the integration (lovelace/README.md), kept identical on purpose:
+ *
+ *   integral2_curve_target > 10   the circuit is calling for heat. Below the
+ *                                 curve minimum the pump treats the target as
+ *                                 "auto", so 10 is the off value, not 0.
+ *   compressor_on                 something is actually being produced
+ *   supply_pump_on                and it is being circulated
+ *   not hotwaterproduction_on     the diverter valve sends it to the tank
+ *                                 instead, so the circuit gets nothing
+ *
+ * Off unless THERMIQ_POOL_CIRCUIT is set: a pump without the expansion card
+ * still reports a curve-2 target, so deriving this unconditionally would draw
+ * a pool branch for people who have no second circuit at all. Opting in here
+ * is the same decision as choosing to define the helper in Home Assistant.
+ */
+static bool widget_pool_active(const struct pump_state *state)
+{
+    if (!state->pool_circuit)
+        return false;
+
+    const struct reg_def *target_def = reg_find("integral2_curve_target");
+    if (!target_def)
+        return false;
+    const struct reg_value *target = state_value(state, target_def);
+    if (!target || (target->kind != VAL_INT && target->kind != VAL_FLOAT))
+        return false;
+    if (!(target->number > 10))
+        return false;
+
+    static const char *const required_on[] = {"compressor_on", "supply_pump_on"};
+    for (size_t i = 0; i < sizeof(required_on) / sizeof(required_on[0]); i++) {
+        char text[STATE_STRING_MAX];
+        state_entity_string(state, "binary_sensor", reg_find(required_on[i]), text,
+                            sizeof(text));
+        if (strcmp(text, "on") != 0)
+            return false;
+    }
+
+    char dhw[STATE_STRING_MAX];
+    state_entity_string(state, "binary_sensor", reg_find("hotwaterproduction_on"), dhw,
+                        sizeof(dhw));
+    return strcmp(dhw, "off") == 0;
+}
+
 void state_widget_states(const struct pump_state *state, struct widget_states *out)
 {
     /* Both come from the generator, so this cannot drift; it is here to say so
@@ -337,14 +386,22 @@ void state_widget_states(const struct pump_state *state, struct widget_states *o
     for (int i = 0; i < WIDGET_ENTITY_COUNT; i++) {
         char *slot = out->storage[i];
         const struct widget_entity *entity = &WIDGET_ENTITIES[i];
-        if (entity->is_demo_switch) {
+        switch (entity->source) {
+        case WE_DEMO:
             snprintf(slot, STATE_STRING_MAX, "%s", state->demo ? "on" : "off");
-        } else if (!entity->key) {
+            break;
+        case WE_POOL:
+            snprintf(slot, STATE_STRING_MAX, "%s",
+                     widget_pool_active(state) ? "on" : "off");
+            break;
+        case WE_FOREIGN:
             /* Belongs to another integration; unknown is what HA would say. */
             snprintf(slot, STATE_STRING_MAX, "unknown");
-        } else {
+            break;
+        case WE_REGISTER:
             state_entity_string(state, entity->domain, reg_find(entity->key), slot,
                                 STATE_STRING_MAX);
+            break;
         }
         out->entries[i] = slot;
     }

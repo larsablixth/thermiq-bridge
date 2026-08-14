@@ -144,6 +144,7 @@ starts holds a configuration that cannot fail later.
 | `THERMIQ_HTTP_PORT` | `8080` | |
 | `THERMIQ_AVAILABILITY_TIMEOUT` | `120` | Seconds of silence before values are shown as stale. |
 | `THERMIQ_DEMO` | `false` | Serve canned values; do not connect to a broker. |
+| `THERMIQ_POOL_CIRCUIT` | `false` | The pump heats a second circuit (a pool) through a heat exchanger. Draws the widget's pool branch while that circuit is actually being heated. Leave off without the expansion card - the pump reports a curve-2 target either way, so this cannot be detected. |
 | `THERMIQ_DISCOVER_SECONDS` | `45` | How long `--discover` listens. Only used by that mode. |
 | `THERMIQ_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. |
 
@@ -205,8 +206,9 @@ expressions become arithmetic, entity ids resolve to array indices. Nothing is
 parsed at runtime.
 
 That is only safe if it is verified, so it is: `tests/test_widget.c` renders
-eight state vectors - demo, heating, hot water, alarm, comms lost, unavailable,
-all-unknown, and every clamp edge - and compares them **byte for byte** against
+nine state vectors - demo, heating, hot water, pool, alarm, comms lost,
+unavailable, all-unknown, and every clamp edge - and compares them **byte for
+byte** against
 the same states rendered through real Jinja2. The build fails on a single byte
 of difference. The live server's `/api/widget` output is identical to the
 Python render.
