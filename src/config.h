@@ -35,6 +35,7 @@ struct config {
 
     bool read_only;
     bool demo;
+    bool pool_circuit;
     double availability_timeout;
     int log_level;
 

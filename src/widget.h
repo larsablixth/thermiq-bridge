@@ -13,14 +13,21 @@
 #include "util.h"
 #include "widget_gen.h"
 
-/* An entity the template reads. `key` is the register key for entities this
- * bridge provides, or NULL for the demo switch and for entities that belong
- * to some other integration (which always read as unknown). */
+/* Where an entity's state comes from. Only WE_REGISTER carries a `key`; the
+ * rest are NULL because no register backs them. */
+enum widget_entity_source {
+    WE_REGISTER, /* a pump register this bridge decodes */
+    WE_DEMO,     /* the template's demo switch, driven by THERMIQ_DEMO */
+    WE_POOL,     /* pool heating, derived from registers - see state.c */
+    WE_FOREIGN,  /* belongs to another integration; always reads as unknown */
+};
+
+/* An entity the template reads. */
 struct widget_entity {
     const char *id;
     const char *domain;
     const char *key;
-    bool is_demo_switch;
+    enum widget_entity_source source;
 };
 
 extern const struct widget_entity WIDGET_ENTITIES[];

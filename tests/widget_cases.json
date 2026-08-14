@@ -8,7 +8,6 @@
     "heatpump_widget.j2. Any entity left out reads as 'unknown', which is what",
     "Home Assistant returns for an entity that does not exist."
   ],
-
   "demo": {
     "input_boolean.hpviz_demo": "on",
     "binary_sensor.thermiq_mqtt_vp1_alarm_indication_on": "off",
@@ -38,7 +37,6 @@
     "sensor.thermiq_mqtt_vp1_time_str": "demo data",
     "switch.thermiq_mqtt_vp1_heatpump_evu_block": "off"
   },
-
   "heating": {
     "binary_sensor.thermiq_mqtt_vp1_alarm_indication_on": "off",
     "binary_sensor.thermiq_mqtt_vp1_boiler_3kw_on": "off",
@@ -67,7 +65,6 @@
     "sensor.thermiq_mqtt_vp1_time_str": "2026-08-12 09:14",
     "switch.thermiq_mqtt_vp1_heatpump_evu_block": "off"
   },
-
   "hotwater": {
     "binary_sensor.thermiq_mqtt_vp1_alarm_indication_on": "off",
     "binary_sensor.thermiq_mqtt_vp1_boiler_3kw_on": "on",
@@ -96,7 +93,35 @@
     "sensor.thermiq_mqtt_vp1_time_str": "2026-08-12 09:15",
     "switch.thermiq_mqtt_vp1_heatpump_evu_block": "on"
   },
-
+  "pool": {
+    "binary_sensor.thermiq_mqtt_vp1_alarm_indication_on": "off",
+    "binary_sensor.thermiq_mqtt_vp1_boiler_3kw_on": "off",
+    "binary_sensor.thermiq_mqtt_vp1_boiler_6kw_on": "off",
+    "binary_sensor.thermiq_mqtt_vp1_brine_pump_on": "on",
+    "binary_sensor.thermiq_mqtt_vp1_compressor_on": "on",
+    "binary_sensor.thermiq_mqtt_vp1_hotwaterproduction_on": "off",
+    "binary_sensor.thermiq_mqtt_vp1_opt_hgw_installed": "off",
+    "binary_sensor.thermiq_mqtt_vp1_opt_optimum_installed": "on",
+    "binary_sensor.thermiq_mqtt_vp1_supply_pump_on": "on",
+    "number.thermiq_mqtt_vp1_integral2_curve_target": "27",
+    "sensor.thermiq_mqtt_vp1_boiler_t": "57.0",
+    "sensor.thermiq_mqtt_vp1_brine_in_t": "1.5",
+    "sensor.thermiq_mqtt_vp1_brine_out_t": "-0.5",
+    "sensor.thermiq_mqtt_vp1_brine_pump_speed": "55",
+    "sensor.thermiq_mqtt_vp1_communication_status": "Ok",
+    "sensor.thermiq_mqtt_vp1_heating_stop_t": "9",
+    "sensor.thermiq_mqtt_vp1_hgw_water_t": "41",
+    "sensor.thermiq_mqtt_vp1_indoor_t": "20.7",
+    "sensor.thermiq_mqtt_vp1_outdoor_t": "24.0",
+    "sensor.thermiq_mqtt_vp1_pressurepipe_t": "71.9",
+    "sensor.thermiq_mqtt_vp1_returnline_t": "33.0",
+    "sensor.thermiq_mqtt_vp1_supply_pump_speed": "62",
+    "sensor.thermiq_mqtt_vp1_supply_shunt_t": "33.1",
+    "sensor.thermiq_mqtt_vp1_supplyline_t": "41.0",
+    "sensor.thermiq_mqtt_vp1_time_str": "2026-08-12 09:14",
+    "switch.thermiq_mqtt_vp1_heatpump_evu_block": "off",
+    "binary_sensor.pool_heating_active": "on"
+  },
   "idle_comms_lost": {
     "binary_sensor.thermiq_mqtt_vp1_alarm_indication_on": "off",
     "binary_sensor.thermiq_mqtt_vp1_boiler_3kw_on": "off",
@@ -125,7 +150,6 @@
     "sensor.thermiq_mqtt_vp1_time_str": "2026-08-12 09:16",
     "switch.thermiq_mqtt_vp1_heatpump_evu_block": "off"
   },
-
   "alarm": {
     "binary_sensor.thermiq_mqtt_vp1_alarm_indication_on": "on",
     "binary_sensor.thermiq_mqtt_vp1_boiler_3kw_on": "on",
@@ -154,7 +178,6 @@
     "sensor.thermiq_mqtt_vp1_time_str": "2026-08-12 09:17",
     "switch.thermiq_mqtt_vp1_heatpump_evu_block": "off"
   },
-
   "unavailable": {
     "binary_sensor.thermiq_mqtt_vp1_alarm_indication_on": "unavailable",
     "binary_sensor.thermiq_mqtt_vp1_boiler_3kw_on": "unavailable",
@@ -183,9 +206,7 @@
     "sensor.thermiq_mqtt_vp1_time_str": "unavailable",
     "switch.thermiq_mqtt_vp1_heatpump_evu_block": "unavailable"
   },
-
   "all_unknown": {},
-
   "clamp_extremes": {
     "binary_sensor.thermiq_mqtt_vp1_alarm_indication_on": "off",
     "binary_sensor.thermiq_mqtt_vp1_boiler_3kw_on": "off",
