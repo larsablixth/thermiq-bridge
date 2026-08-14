@@ -22,7 +22,7 @@ make generate && make test
 ## Provenance
 
 - Upstream: <https://github.com/larsablixth/thermiq_mqtt-ha>
-- Taken from commit: `24cd625684596f79ad1cff1d9f586c765f0cb5d5`
+- Taken from commit: `c5be98b95e70efa9319617a01b30b96f3e30baf9`
 - Vendored on: 2026-08-14
 
 Living in a separate repository means these copies can fall behind, which
