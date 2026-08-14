@@ -378,9 +378,9 @@ void widget_render(struct buf *out, const char *const *state)
             "\" stroke-width=\"8\" stroke-linecap=\"butt\" stroke-linejoin=\"round\"/><path d=\"M258 246 H300\" fill=\"none"
             "\" stroke=\""
             , 110);
-        m_pcol(out, state, jv_s(v_t_pool));
-        buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><path d=\"M258 270 H300\" fill=\"none\" stroke=\"", 86);
         m_tcol(out, state, jv_s(v_t_ret));
+        buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><path d=\"M258 270 H300\" fill=\"none\" stroke=\"", 86);
+        m_pcol(out, state, jv_s(v_t_pool));
         buf_add(out,
             "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><rect x=\"232\" y=\"234\" width=\"26\" height=\"48\" rx=\"3\" fill=\""
             "#ffffff\" stroke=\"#78909c\" stroke-width=\"2\"/><line x1=\"232\" y1=\"282\" x2=\"258\" y2=\"234\" stroke=\"#78909"
@@ -423,15 +423,15 @@ void widget_render(struct buf *out, const char *const *state)
             ":auto;animation:vpoffs 5.2s linear infinite;animation-delay:-3.69s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1."
             "6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round"
             "\" style=\"offset-path:path('M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-r"
-            "otate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-4.73s\"/><path d=\"M298 246 H260\" fi"
+            "otate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-4.73s\"/><path d=\"M260 246 H298\" fi"
             "ll=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"20.0 18.0\" st"
             "yle=\"animation:vpd11 1.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke"
             "=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path"
-            "('M298 246 H260');offset-rotate:auto;animation:vpoffs 1.4s linear infinite;animation-delay:-0.74s\"/>"
-            "<path d=\"M260 270 H298\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" strok"
+            "('M260 246 H298');offset-rotate:auto;animation:vpoffs 1.4s linear infinite;animation-delay:-0.74s\"/>"
+            "<path d=\"M298 270 H260\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" strok"
             "e-dasharray=\"20.0 18.0\" style=\"animation:vpd12 1.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1"
             ".6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"roun"
-            "d\" style=\"offset-path:path('M260 270 H298');offset-rotate:auto;animation:vpoffs 1.4s linear infinite"
+            "d\" style=\"offset-path:path('M298 270 H260');offset-rotate:auto;animation:vpoffs 1.4s linear infinite"
             ";animation-delay:-0.74s\"/><rect x=\"300\" y=\"233\" width=\"78\" height=\"48\" rx=\"9\" fill=\""
             , 5084);
         m_pcol(out, state, jv_s(v_t_pool));
@@ -476,13 +476,10 @@ void widget_render(struct buf *out, const char *const *state)
         buf_str(out, state[19]);
         buf_add(out, "<span class=\"hpwidget-unit-span\">&deg;C</span></div>", 52);
     }
-    buf_add(out, " <div class=\"hpwidget-val\" title=\"Supply-line Temperature\" style=\"position:absolute;", 84);
-    if ((v_dhw_on && (!v_demo))) {
-        buf_add(out, "top:76px;left:98px", 18);
-    } else {
-        buf_add(out, "top:138px;left:131px", 20);
-    }
-    buf_add(out, ";z-index:3;\"><span class=\"hpwidget-name-span\" id=\"hpwidget-T_FRAM\"></span>", 74);
+    buf_add(out,
+        " <div class=\"hpwidget-val\" title=\"Supply-line Temperature\" style=\"position:absolute;top:138px;left:1"
+        "31px;z-index:3;\"><span class=\"hpwidget-name-span\" id=\"hpwidget-T_FRAM\"></span>"
+        , 178);
     buf_str(out, state[3]);
     buf_add(out,
         "<span class=\"hpwidget-unit-span\">&deg;C</span></div> <div class=\"hpwidget-val\" title=\"Supply pump\" s"
