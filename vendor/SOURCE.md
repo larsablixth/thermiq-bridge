@@ -22,8 +22,8 @@ make generate && make test
 ## Provenance
 
 - Upstream: <https://github.com/larsablixth/thermiq_mqtt-ha>
-- Taken from commit: `c5be98b95e70efa9319617a01b30b96f3e30baf9`
-- Vendored on: 2026-08-14
+- Taken from commit: `7a17ace964ce8d077493f20fe37c932fdf67bb8a`
+- Vendored on: 2026-08-15
 
 Living in a separate repository means these copies can fall behind, which
 would be the quiet kind of wrong: the bridge would keep decoding and drawing

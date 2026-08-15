@@ -206,8 +206,9 @@ expressions become arithmetic, entity ids resolve to array indices. Nothing is
 parsed at runtime.
 
 That is only safe if it is verified, so it is: `tests/test_widget.c` renders
-nine state vectors - demo, heating, hot water, pool, alarm, comms lost,
-unavailable, all-unknown, and every clamp edge - and compares them **byte for
+ten state vectors - demo, heating, hot water, hot water while
+circulating, pool, alarm, comms lost, unavailable, all-unknown, and every
+clamp edge - and compares them **byte for
 byte** against
 the same states rendered through real Jinja2. The build fails on a single byte
 of difference. The live server's `/api/widget` output is identical to the

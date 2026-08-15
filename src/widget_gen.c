@@ -135,6 +135,8 @@ void widget_render(struct buf *out, const char *const *state)
     (void)v_dhw_on;
     bool v_rad_on = (((strcmp(state[10], "on") == 0) && (!v_dhw_on)) && (str_float(state[11], (double)(99)) < str_float(state[12], (double)(0))));
     (void)v_rad_on;
+    bool v_circ_on = (v_demo || (strcmp(state[10], "on") == 0));
+    (void)v_circ_on;
     buf_add(out,
         "<div style=\"position:absolute;top:0px;left:0px;z-index:2;pointer-events:none;\"><style>@keyframes vpd"
         "W{to{stroke-dashoffset:-52px}}@keyframes vpimp{from{transform:translate(13px,13px) rotate(0deg)}to{t"
@@ -349,16 +351,20 @@ void widget_render(struct buf *out, const char *const *state)
             "\" style=\"offset-path:path('M170 118 H215');offset-rotate:auto;animation:vpoffs 2.4s linear infinite;"
             "animation-delay:-0.66s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-w"
             "idth=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H215');o"
-            "ffset-rotate:auto;animation:vpoffs 2.4s linear infinite;animation-delay:-1.86s\"/><path d=\"M215 294.5"
-            " H162 Q153.5 294.5 153.5 287 V254\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"r"
-            "ound\" stroke-dasharray=\"20.0 29.5\" style=\"animation:vpd8 2.6s linear infinite\"/><path d=\"M-1.6 -3.4 "
-            "L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-line"
-            "join=\"round\" style=\"offset-path:path('M215 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:au"
-            "to;animation:vpoffs 2.6s linear infinite;animation-delay:-0.53s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3"
-            ".4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" s"
-            "tyle=\"offset-path:path('M215 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:v"
-            "poffs 2.6s linear infinite;animation-delay:-1.83s\"/>"
-            , 1452);
+            "ffset-rotate:auto;animation:vpoffs 2.4s linear infinite;animation-delay:-1.86s\"/>"
+            , 681);
+    }
+    if (v_circ_on) {
+        buf_add(out,
+            "<path d=\"M215 294.5 H162 Q153.5 294.5 153.5 287 V254\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6"
+            "\" stroke-linecap=\"round\" stroke-dasharray=\"20.0 29.5\" style=\"animation:vpd8 2.6s linear infinite\"/><"
+            "path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap="
+            "\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M215 294.5 H162 Q153.5 294.5 153.5 287 V254"
+            "');offset-rotate:auto;animation:vpoffs 2.6s linear infinite;animation-delay:-0.53s\"/><path d=\"M-1.6 "
+            "-3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke"
+            "-linejoin=\"round\" style=\"offset-path:path('M215 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rota"
+            "te:auto;animation:vpoffs 2.6s linear infinite;animation-delay:-1.83s\"/>"
+            , 771);
     }
     if (((!v_demo) && (strcmp(state[13], "on") == 0))) {
         buf_add(out, "<style>.vppoolwave{fill:none;stroke:", 36);
