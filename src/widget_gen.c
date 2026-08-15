@@ -137,6 +137,8 @@ void widget_render(struct buf *out, const char *const *state)
     (void)v_rad_on;
     bool v_circ_on = (v_demo || (strcmp(state[10], "on") == 0));
     (void)v_circ_on;
+    double v_t_pool_out = (str_float(v_t_pool, (double)(0)) + median3((double)(0), (str_float(v_t_sup, (double)(0)) - str_float(v_t_ret, (double)(0))), (double)(3)));
+    (void)v_t_pool_out;
     buf_add(out,
         "<div style=\"position:absolute;top:0px;left:0px;z-index:2;pointer-events:none;\"><style>@keyframes vpd"
         "W{to{stroke-dashoffset:-52px}}@keyframes vpimp{from{transform:translate(13px,13px) rotate(0deg)}to{t"
@@ -384,9 +386,9 @@ void widget_render(struct buf *out, const char *const *state)
             "\" stroke-width=\"8\" stroke-linecap=\"butt\" stroke-linejoin=\"round\"/><path d=\"M258 246 H300\" fill=\"none"
             "\" stroke=\""
             , 110);
-        m_tcol(out, state, jv_s(v_t_ret));
-        buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><path d=\"M258 270 H300\" fill=\"none\" stroke=\"", 86);
         m_pcol(out, state, jv_s(v_t_pool));
+        buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><path d=\"M258 270 H300\" fill=\"none\" stroke=\"", 86);
+        m_pcol(out, state, jv_d(v_t_pool_out));
         buf_add(out,
             "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><rect x=\"232\" y=\"234\" width=\"26\" height=\"48\" rx=\"3\" fill=\""
             "#ffffff\" stroke=\"#78909c\" stroke-width=\"2\"/><line x1=\"232\" y1=\"282\" x2=\"258\" y2=\"234\" stroke=\"#78909"
