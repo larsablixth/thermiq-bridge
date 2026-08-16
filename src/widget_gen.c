@@ -28,8 +28,8 @@ const struct widget_entity WIDGET_ENTITIES[] = {
     {"sensor.thermiq_mqtt_vp1_outdoor_t", "sensor", "outdoor_t", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_heating_stop_t", "sensor", "heating_stop_t", WE_REGISTER},
     {"select.thermiq_mqtt_vp1_secondary_circuit", "select", "secondary_circuit", WE_REGISTER},
-    {"sensor.thermiq_mqtt_vp1_brine_pump_speed", "sensor", "brine_pump_speed", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_supply_pump_speed", "sensor", "supply_pump_speed", WE_REGISTER},
+    {"sensor.thermiq_mqtt_vp1_brine_pump_speed", "sensor", "brine_pump_speed", WE_REGISTER},
     {"binary_sensor.pool_heating_active", "binary_sensor", NULL, WE_POOL},
     {"binary_sensor.thermiq_mqtt_vp1_brine_pump_on", "binary_sensor", "brine_pump_on", WE_REGISTER},
     {"binary_sensor.thermiq_mqtt_vp1_compressor_on", "binary_sensor", "compressor_on", WE_REGISTER},
@@ -142,9 +142,13 @@ void widget_render(struct buf *out, const char *const *state)
     (void)v_circ_on;
     bool v_is_buffer = (strcmp(state[14], "buffer") == 0);
     (void)v_is_buffer;
-    double v_brine_spin = rint(((double)(90000) / median3((double)(20), str_float(state[15], (double)(100)), (double)(100))));
+    double v_vpw = rint(median3(20.0, str_float(state[15], 100.0), 100.0));
+    (void)v_vpw;
+    double v_vpb = rint(median3(20.0, str_float(state[16], 100.0), 100.0));
+    (void)v_vpb;
+    double v_brine_spin = rint(((double)(90000) / median3((double)(20), str_float(state[16], 100.0), (double)(100))));
     (void)v_brine_spin;
-    double v_supply_spin = rint(((double)(90000) / median3((double)(20), str_float(state[16], (double)(100)), (double)(100))));
+    double v_supply_spin = rint(((double)(90000) / median3((double)(20), str_float(state[15], 100.0), (double)(100))));
     (void)v_supply_spin;
     double v_t_pool_out = (v_t_pool + median3((double)(0), (str_float(v_t_sup, (double)(0)) - str_float(v_t_ret, (double)(0))), (double)(40)));
     (void)v_t_pool_out;
@@ -158,15 +162,20 @@ void widget_render(struct buf *out, const char *const *state)
         "hoffset:-99.0px}}@keyframes vpd9{to{stroke-dashoffset:-134.0px}}@keyframes vpd10{to{stroke-dashoffse"
         "t:-183.5px}}@keyframes vpd11{to{stroke-dashoffset:-38.0px}}@keyframes vpd12{to{stroke-dashoffset:-38"
         ".0px}}@keyframes vpoffs{from{offset-distance:0%}to{offset-distance:100%}}</style><svg style=\"height:"
-        "300px;overflow:visible;\" viewBox=\"0 0 400 368\"><defs><linearGradient id=\"vgcab\" x1=\"0\" y1=\"0\" x2=\"1\""
-        " y2=\"0\"><stop offset=\"0\" stop-color=\"#eceeef\"/><stop offset=\"0.5\" stop-color=\"#f6f7f8\"/><stop offset"
-        "=\"1\" stop-color=\"#dfe1e3\"/></linearGradient></defs><rect x=\"50\" y=\"8\" width=\"125\" height=\"302\" rx=\"1"
-        "0\" fill=\"url(#vgcab)\" stroke=\"#aab4ba\" stroke-width=\"2\"/><line x1=\"50\" y1=\"28\" x2=\"175\" y2=\"28\" stro"
-        "ke=\"#c5cdd2\" stroke-width=\"1.5\"/><rect x=\"60\" y=\"312\" width=\"20\" height=\"5\" rx=\"2\" fill=\"#b8bfc4\"/><"
-        "rect x=\"145\" y=\"312\" width=\"20\" height=\"5\" rx=\"2\" fill=\"#b8bfc4\"/><defs></defs><g id=\"piperedo\"><def"
-        "s><linearGradient id=\"vgl\" gradientUnits=\"userSpaceOnUse\" x1=\"0\" y1=\"292\" x2=\"0\" y2=\"146\"><stop offs"
-        "et=\"0\" stop-color=\""
-        , 1619);
+        "300px;overflow:visible;--vpw:"
+        , 929);
+    buf_double(out, v_vpw);
+    buf_add(out, ";--vpb:", 7);
+    buf_double(out, v_vpb);
+    buf_add(out,
+        ";\" viewBox=\"0 0 400 368\"><defs><linearGradient id=\"vgcab\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\""
+        "0\" stop-color=\"#eceeef\"/><stop offset=\"0.5\" stop-color=\"#f6f7f8\"/><stop offset=\"1\" stop-color=\"#dfe1"
+        "e3\"/></linearGradient></defs><rect x=\"50\" y=\"8\" width=\"125\" height=\"302\" rx=\"10\" fill=\"url(#vgcab)\" "
+        "stroke=\"#aab4ba\" stroke-width=\"2\"/><line x1=\"50\" y1=\"28\" x2=\"175\" y2=\"28\" stroke=\"#c5cdd2\" stroke-wi"
+        "dth=\"1.5\"/><rect x=\"60\" y=\"312\" width=\"20\" height=\"5\" rx=\"2\" fill=\"#b8bfc4\"/><rect x=\"145\" y=\"312\" w"
+        "idth=\"20\" height=\"5\" rx=\"2\" fill=\"#b8bfc4\"/><defs></defs><g id=\"piperedo\"><defs><linearGradient id=\""
+        "vgl\" gradientUnits=\"userSpaceOnUse\" x1=\"0\" y1=\"292\" x2=\"0\" y2=\"146\"><stop offset=\"0\" stop-color=\""
+        , 697);
     m_gcol(out, state, jv_s(v_t_brinein));
     buf_add(out, "\"/><stop offset=\"1\" stop-color=\"", 32);
     m_gcol(out, state, jv_s(v_t_brinein));
@@ -209,9 +218,9 @@ void widget_render(struct buf *out, const char *const *state)
             "<path d=\"M153.5 192 V140\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" str"
             "oke-dasharray=\"18.0 34.0\" style=\"animation:vpdW 2.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-"
             "1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"rou"
-            "nd\" style=\"offset-path:path('M153.5 192 V140');offset-rotate:auto;animation:vpoffs 2.4s linear infin"
-            "ite;animation-delay:-0.83s\"/>"
-            , 429);
+            "nd\" style=\"offset-path:path('M153.5 192 V140');offset-rotate:auto;animation:vpoffs calc(2.4s * 100 /"
+            " var(--vpw)) linear infinite;animation-delay:calc(-0.83s * 100 / var(--vpw))\"/>"
+            , 479);
     }
     if (v_dhw_on) {
         buf_add(out, "<path d=\"M147 118 H121 Q113 118 113 110 V88\" fill=\"none\" stroke=\"", 65);
@@ -276,28 +285,32 @@ void widget_render(struct buf *out, const char *const *state)
     if ((v_demo || (strcmp(state[18], "on") == 0))) {
         buf_add(out,
             "<path d=\"M26.5 152 V146 Q26.5 138.5 34 138.5 H59 Q66.5 138.5 66.5 146 V190\" fill=\"none\" stroke=\"#fff"
-            "fff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"18.1 14.8\" style=\"animation:vpd0 3."
-            "6s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width"
-            "=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M26.5 152 V146 Q26.5 "
-            "138.5 34 138.5 H59 Q66.5 138.5 66.5 146 V190');offset-rotate:auto;animation:vpoffs 3.6s linear infin"
-            "ite;animation-delay:-0.66s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stro"
-            "ke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M26.5 152 V14"
-            "6 Q26.5 138.5 34 138.5 H59 Q66.5 138.5 66.5 146 V190');offset-rotate:auto;animation:vpoffs 3.6s line"
-            "ar infinite;animation-delay:-1.86s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffff"
-            "ff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M26.5"
-            " 152 V146 Q26.5 138.5 34 138.5 H59 Q66.5 138.5 66.5 146 V190');offset-rotate:auto;animation:vpoffs 3"
-            ".6s linear infinite;animation-delay:-3.06s\"/><path d=\"M66.5 252 V287 Q66.5 294.5 59 294.5 H14\" fill="
-            "\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"16.8 13.8\" style"
-            "=\"animation:vpd1 3.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#f"
+            "fff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"18.1 14.8\" style=\"animation:vpd0 ca"
+            "lc(3.6s * 100 / var(--vpb)) linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stro"
+            "ke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:pa"
+            "th('M26.5 152 V146 Q26.5 138.5 34 138.5 H59 Q66.5 138.5 66.5 146 V190');offset-rotate:auto;animation"
+            ":vpoffs calc(3.6s * 100 / var(--vpb)) linear infinite;animation-delay:calc(-0.66s * 100 / var(--vpb)"
+            ")\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-lin"
+            "ecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M26.5 152 V146 Q26.5 138.5 34 138.5 H5"
+            "9 Q66.5 138.5 66.5 146 V190');offset-rotate:auto;animation:vpoffs calc(3.6s * 100 / var(--vpb)) line"
+            "ar infinite;animation-delay:calc(-1.86s * 100 / var(--vpb))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" "
+            "fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style"
+            "=\"offset-path:path('M26.5 152 V146 Q26.5 138.5 34 138.5 H59 Q66.5 138.5 66.5 146 V190');offset-rotat"
+            "e:auto;animation:vpoffs calc(3.6s * 100 / var(--vpb)) linear infinite;animation-delay:calc(-3.06s * "
+            "100 / var(--vpb))\"/><path d=\"M66.5 252 V287 Q66.5 294.5 59 294.5 H14\" fill=\"none\" stroke=\"#ffffff\" s"
+            "troke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"16.8 13.8\" style=\"animation:vpd1 calc(3.4"
+            "s * 100 / var(--vpb)) linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#f"
             "fffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M6"
-            "6.5 252 V287 Q66.5 294.5 59 294.5 H14');offset-rotate:auto;animation:vpoffs 3.4s linear infinite;ani"
-            "mation-delay:-0.62s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-widt"
-            "h=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M66.5 252 V287 Q66.5"
-            " 294.5 59 294.5 H14');offset-rotate:auto;animation:vpoffs 3.4s linear infinite;animation-delay:-1.76"
-            "s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-lin"
+            "6.5 252 V287 Q66.5 294.5 59 294.5 H14');offset-rotate:auto;animation:vpoffs calc(3.4s * 100 / var(--"
+            "vpb)) linear infinite;animation-delay:calc(-0.62s * 100 / var(--vpb))\"/><path d=\"M-1.6 -3.4 L2.6 0 L"
+            "-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"ro"
+            "und\" style=\"offset-path:path('M66.5 252 V287 Q66.5 294.5 59 294.5 H14');offset-rotate:auto;animation"
+            ":vpoffs calc(3.4s * 100 / var(--vpb)) linear infinite;animation-delay:calc(-1.76s * 100 / var(--vpb)"
+            ")\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-lin"
             "ecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M66.5 252 V287 Q66.5 294.5 59 294.5 H1"
-            "4');offset-rotate:auto;animation:vpoffs 3.4s linear infinite;animation-delay:-2.89s\"/>"
-            , 2186);
+            "4');offset-rotate:auto;animation:vpoffs calc(3.4s * 100 / var(--vpb)) linear infinite;animation-dela"
+            "y:calc(-2.89s * 100 / var(--vpb))\"/>"
+            , 2536);
     }
     if ((v_demo || (strcmp(state[19], "on") == 0))) {
         buf_add(out,
@@ -342,40 +355,44 @@ void widget_render(struct buf *out, const char *const *state)
     if (v_dhw_on) {
         buf_add(out,
             "<path d=\"M144 118 H121 Q113 118 113 110 V92\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-"
-            "linecap=\"round\" stroke-dasharray=\"9.9 8.1\" style=\"animation:vpd4 3.0s linear infinite\"/><path d=\"M-1"
-            ".6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" str"
-            "oke-linejoin=\"round\" style=\"offset-path:path('M144 118 H121 Q113 118 113 110 V92');offset-rotate:aut"
-            "o;animation:vpoffs 3.0s linear infinite;animation-delay:-0.55s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3."
-            "4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" st"
-            "yle=\"offset-path:path('M144 118 H121 Q113 118 113 110 V92');offset-rotate:auto;animation:vpoffs 3.0s"
-            " linear infinite;animation-delay:-1.55s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\""
-            "#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('"
-            "M144 118 H121 Q113 118 113 110 V92');offset-rotate:auto;animation:vpoffs 3.0s linear infinite;animat"
-            "ion-delay:-2.55s\"/>"
-            , 1019);
+            "linecap=\"round\" stroke-dasharray=\"9.9 8.1\" style=\"animation:vpd4 calc(3.0s * 100 / var(--vpw)) linea"
+            "r infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" s"
+            "troke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M144 118 H121 Q113 118 113 11"
+            "0 V92');offset-rotate:auto;animation:vpoffs calc(3.0s * 100 / var(--vpw)) linear infinite;animation-"
+            "delay:calc(-0.55s * 100 / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#f"
+            "fffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M1"
+            "44 118 H121 Q113 118 113 110 V92');offset-rotate:auto;animation:vpoffs calc(3.0s * 100 / var(--vpw))"
+            " linear infinite;animation-delay:calc(-1.55s * 100 / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 "
+            "3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" "
+            "style=\"offset-path:path('M144 118 H121 Q113 118 113 110 V92');offset-rotate:auto;animation:vpoffs ca"
+            "lc(3.0s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-2.55s * 100 / var(--vpw))\"/>"
+            , 1194);
     }
     if (v_rad_on) {
         buf_add(out,
             "<path d=\"M170 118 H215\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" strok"
-            "e-dasharray=\"12.4 10.1\" style=\"animation:vpd7 2.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1."
-            "6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round"
-            "\" style=\"offset-path:path('M170 118 H215');offset-rotate:auto;animation:vpoffs 2.4s linear infinite;"
-            "animation-delay:-0.66s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-w"
-            "idth=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H215');o"
-            "ffset-rotate:auto;animation:vpoffs 2.4s linear infinite;animation-delay:-1.86s\"/>"
-            , 681);
+            "e-dasharray=\"12.4 10.1\" style=\"animation:vpd7 calc(2.4s * 100 / var(--vpw)) linear infinite\"/><path "
+            "d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"roun"
+            "d\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H215');offset-rotate:auto;animation:vpo"
+            "ffs calc(2.4s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-0.66s * 100 / var(--vpw))\"/>"
+            "<path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap"
+            "=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H215');offset-rotate:auto;animati"
+            "on:vpoffs calc(2.4s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-1.86s * 100 / var(--vp"
+            "w))\"/>"
+            , 806);
     }
     if (v_circ_on) {
         buf_add(out,
             "<path d=\"M215 294.5 H162 Q153.5 294.5 153.5 287 V254\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6"
-            "\" stroke-linecap=\"round\" stroke-dasharray=\"20.0 29.5\" style=\"animation:vpd8 2.6s linear infinite\"/><"
-            "path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap="
-            "\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M215 294.5 H162 Q153.5 294.5 153.5 287 V254"
-            "');offset-rotate:auto;animation:vpoffs 2.6s linear infinite;animation-delay:-0.53s\"/><path d=\"M-1.6 "
-            "-3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke"
-            "-linejoin=\"round\" style=\"offset-path:path('M215 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rota"
-            "te:auto;animation:vpoffs 2.6s linear infinite;animation-delay:-1.83s\"/>"
-            , 771);
+            "\" stroke-linecap=\"round\" stroke-dasharray=\"20.0 29.5\" style=\"animation:vpd8 calc(2.6s * 100 / var(--"
+            "vpw)) linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-wi"
+            "dth=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M215 294.5 H162 Q1"
+            "53.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs calc(2.6s * 100 / var(--vpw)) linear"
+            " infinite;animation-delay:calc(-0.53s * 100 / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fi"
+            "ll=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\""
+            "offset-path:path('M215 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs "
+            "calc(2.6s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-1.83s * 100 / var(--vpw))\"/>"
+            , 896);
     }
     if (((!v_demo) && (strcmp(state[17], "on") == 0))) {
         buf_add(out, "<style>.vppoolwave{fill:none;stroke:", 36);
@@ -412,67 +429,76 @@ void widget_render(struct buf *out, const char *const *state)
             "=\"246\" r=\"2.6\" fill=\"#78909c\"/><circle cx=\"258\" cy=\"270\" r=\"2.6\" fill=\"#78909c\"/><text x=\"245\" y=\"29"
             "4\" text-anchor=\"middle\" font-size=\"7.5\" fill=\"#78909c\">VVX</text><path d=\"M231 270 Q224.5 270 224.5 "
             "277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254\" fill=\"none\" stroke=\"#ffffff\" str"
-            "oke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"14.7 12.1\" style=\"animation:vpd9 5.2s linea"
-            "r infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" s"
-            "troke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277"
-            ".5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoff"
-            "s 5.2s linear infinite;animation-delay:-0.57s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" st"
-            "roke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:"
-            "path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254')"
-            ";offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-1.61s\"/><path d=\"M-1.6 -3"
-            ".4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-l"
-            "inejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5"
-            " H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animati"
-            "on-delay:-2.65s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2"
-            ".6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224."
-            "5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:"
-            "vpoffs 5.2s linear infinite;animation-delay:-3.69s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"non"
-            "e\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-"
-            "path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V"
-            "254');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-4.73s\"/><path d=\"M17"
-            "0 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246\" fill=\"none\" stroke=\"#ffffff\" stroke-wid"
-            "th=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"20.0 16.7\" style=\"animation:vpd10 5.2s linear infi"
+            "oke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"14.7 12.1\" style=\"animation:vpd9 calc(5.2s "
+            "* 100 / var(--vpw)) linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#fff"
+            "fff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M231"
+            " 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-ro"
+            "tate:auto;animation:vpoffs calc(5.2s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-0.57s"
+            " * 100 / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-wid"
+            "th=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270"
+            " 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;anima"
+            "tion:vpoffs calc(5.2s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-1.61s * 100 / var(--"
+            "vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke"
+            "-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277.5 V2"
+            "87 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs cal"
+            "c(5.2s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-2.65s * 100 / var(--vpw))\"/><path d"
+            "=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round"
+            "\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5"
+            " 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs calc(5.2s * 100 / "
+            "var(--vpw)) linear infinite;animation-delay:calc(-3.69s * 100 / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2"
+            ".6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejo"
+            "in=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162"
+            " Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs calc(5.2s * 100 / var(--vpw)) lin"
+            "ear infinite;animation-delay:calc(-4.73s * 100 / var(--vpw))\"/><path d=\"M170 118 H217 Q224.5 118 224"
+            ".5 125.5 V238.5 Q224.5 246 231 246\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\""
+            "round\" stroke-dasharray=\"20.0 16.7\" style=\"animation:vpd10 calc(5.2s * 100 / var(--vpw)) linear infi"
             "nite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-"
             "linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q224.5 118 224.5 125."
-            "5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animation-del"
-            "ay:-0.57s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" st"
-            "roke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q224.5 118 224.5"
-            " 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animatio"
-            "n-delay:-1.61s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2."
+            "5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs calc(5.2s * 100 / var(--vpw)) line"
+            "ar infinite;animation-delay:calc(-0.57s * 100 / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" "
+            "fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style"
+            "=\"offset-path:path('M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:a"
+            "uto;animation:vpoffs calc(5.2s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-1.61s * 100"
+            " / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2."
             "6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q224.5 118 "
-            "224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;ani"
-            "mation-delay:-2.65s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-widt"
-            "h=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q224.5"
-            " 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear infinit"
-            "e;animation-delay:-3.69s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke"
+            "224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs calc(5.2s * 100 / var(--"
+            "vpw)) linear infinite;animation-delay:calc(-2.65s * 100 / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L"
+            "-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"ro"
+            "und\" style=\"offset-path:path('M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offse"
+            "t-rotate:auto;animation:vpoffs calc(5.2s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-3"
+            ".69s * 100 / var(--vpw))\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke"
             "-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q"
-            "224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear in"
-            "finite;animation-delay:-4.73s\"/>"
-            , 4132);
+            "224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs calc(5.2s * 10"
+            "0 / var(--vpw)) linear infinite;animation-delay:calc(-4.73s * 100 / var(--vpw))\"/>"
+            , 4682);
         if (v_is_buffer) {
             buf_add(out,
                 "<path d=\"M260 246 H298\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" strok"
-                "e-dasharray=\"20.0 18.0\" style=\"animation:vpd11 1.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1"
-                ".6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"roun"
-                "d\" style=\"offset-path:path('M260 246 H298');offset-rotate:auto;animation:vpoffs 1.4s linear infinite"
-                ";animation-delay:-0.74s\"/><path d=\"M298 270 H260\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" st"
-                "roke-linecap=\"round\" stroke-dasharray=\"20.0 18.0\" style=\"animation:vpd12 1.4s linear infinite\"/><pat"
+                "e-dasharray=\"20.0 18.0\" style=\"animation:vpd11 calc(1.4s * 100 / var(--vpw)) linear infinite\"/><path"
+                " d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"rou"
+                "nd\" stroke-linejoin=\"round\" style=\"offset-path:path('M260 246 H298');offset-rotate:auto;animation:vp"
+                "offs calc(1.4s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-0.74s * 100 / var(--vpw))\"/"
+                "><path d=\"M298 270 H260\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stro"
+                "ke-dasharray=\"20.0 18.0\" style=\"animation:vpd12 calc(1.4s * 100 / var(--vpw)) linear infinite\"/><pat"
                 "h d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"ro"
                 "und\" stroke-linejoin=\"round\" style=\"offset-path:path('M298 270 H260');offset-rotate:auto;animation:v"
-                "poffs 1.4s linear infinite;animation-delay:-0.74s\"/>"
-                , 852);
+                "poffs calc(1.4s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-0.74s * 100 / var(--vpw))\""
+                "/>"
+                , 1002);
         } else {
             buf_add(out,
                 "<path d=\"M298 246 H260\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" strok"
-                "e-dasharray=\"20.0 18.0\" style=\"animation:vpd11 1.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1"
-                ".6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"roun"
-                "d\" style=\"offset-path:path('M298 246 H260');offset-rotate:auto;animation:vpoffs 1.4s linear infinite"
-                ";animation-delay:-0.74s\"/><path d=\"M260 270 H298\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" st"
-                "roke-linecap=\"round\" stroke-dasharray=\"20.0 18.0\" style=\"animation:vpd12 1.4s linear infinite\"/><pat"
+                "e-dasharray=\"20.0 18.0\" style=\"animation:vpd11 calc(1.4s * 100 / var(--vpw)) linear infinite\"/><path"
+                " d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"rou"
+                "nd\" stroke-linejoin=\"round\" style=\"offset-path:path('M298 246 H260');offset-rotate:auto;animation:vp"
+                "offs calc(1.4s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-0.74s * 100 / var(--vpw))\"/"
+                "><path d=\"M260 270 H298\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stro"
+                "ke-dasharray=\"20.0 18.0\" style=\"animation:vpd12 calc(1.4s * 100 / var(--vpw)) linear infinite\"/><pat"
                 "h d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"ro"
                 "und\" stroke-linejoin=\"round\" style=\"offset-path:path('M260 270 H298');offset-rotate:auto;animation:v"
-                "poffs 1.4s linear infinite;animation-delay:-0.74s\"/>"
-                , 852);
+                "poffs calc(1.4s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-0.74s * 100 / var(--vpw))\""
+                "/>"
+                , 1002);
         }
         if (v_is_buffer) {
             buf_add(out, "<rect x=\"297\" y=\"230\" width=\"40\" height=\"54\" rx=\"13\" fill=\"none\" stroke=\"", 73);
@@ -572,7 +598,7 @@ void widget_render(struct buf *out, const char *const *state)
         buf_add(out, "display:none;", 13);
     }
     buf_add(out, "\"><span class=\"hpwidget-name-span\" id=\"hpwidget-CIRK_SPEED\"></span>", 67);
-    buf_str(out, state[16]);
+    buf_str(out, state[15]);
     buf_add(out,
         "<span class=\"hpwidget-unit-span\">&nbsp;%</span></div> <div class=\"hpwidget-val\" title=\"Brine pump\" s"
         "tyle=\"position:absolute;top:156px;left:2px;z-index:3;"
@@ -581,7 +607,7 @@ void widget_render(struct buf *out, const char *const *state)
         buf_add(out, "display:none;", 13);
     }
     buf_add(out, "\"><span class=\"hpwidget-name-span\" id=\"hpwidget-BRINE_SPEED\"></span>", 68);
-    buf_str(out, state[15]);
+    buf_str(out, state[16]);
     buf_add(out,
         "<span class=\"hpwidget-unit-span\">&nbsp;%</span></div> <div class=\"hpwidget-val\" title=\"Return line T"
         "emperature\" style=\"position:absolute;top:205px;left:131px;z-index:3;\"><span class=\"hpwidget-name-spa"
