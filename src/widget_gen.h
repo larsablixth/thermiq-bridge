@@ -3,6 +3,6 @@
 #define THERMIQ_WIDGET_GEN_H
 
 /* Sizes the caller's state array; equals WIDGET_ENTITY_COUNT. */
-#define WIDGET_ENTITY_MAX 29
+#define WIDGET_ENTITY_MAX 28
 
 #endif /* THERMIQ_WIDGET_GEN_H */
