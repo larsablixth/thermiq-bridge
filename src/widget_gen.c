@@ -27,6 +27,7 @@ const struct widget_entity WIDGET_ENTITIES[] = {
     {"binary_sensor.thermiq_mqtt_vp1_supply_pump_on", "binary_sensor", "supply_pump_on", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_outdoor_t", "sensor", "outdoor_t", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_heating_stop_t", "sensor", "heating_stop_t", WE_REGISTER},
+    {"select.thermiq_mqtt_vp1_secondary_circuit", "select", "secondary_circuit", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_brine_pump_speed", "sensor", "brine_pump_speed", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_supply_pump_speed", "sensor", "supply_pump_speed", WE_REGISTER},
     {"binary_sensor.pool_heating_active", "binary_sensor", NULL, WE_POOL},
@@ -42,7 +43,7 @@ const struct widget_entity WIDGET_ENTITIES[] = {
     {"switch.thermiq_mqtt_vp1_heatpump_evu_block", "switch", "heatpump_evu_block", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_indoor_t", "sensor", "indoor_t", WE_REGISTER},
 };
-const int WIDGET_ENTITY_COUNT = 28;
+const int WIDGET_ENTITY_COUNT = 29;
 
 static void m_tcol(struct buf *out, const char *const *state, jval v_t)
 {
@@ -139,9 +140,11 @@ void widget_render(struct buf *out, const char *const *state)
     (void)v_rad_on;
     bool v_circ_on = (v_demo || (strcmp(state[11], "on") == 0));
     (void)v_circ_on;
-    double v_brine_spin = rint(((double)(90000) / median3((double)(20), str_float(state[14], (double)(100)), (double)(100))));
+    bool v_is_buffer = (strcmp(state[14], "buffer") == 0);
+    (void)v_is_buffer;
+    double v_brine_spin = rint(((double)(90000) / median3((double)(20), str_float(state[15], (double)(100)), (double)(100))));
     (void)v_brine_spin;
-    double v_supply_spin = rint(((double)(90000) / median3((double)(20), str_float(state[15], (double)(100)), (double)(100))));
+    double v_supply_spin = rint(((double)(90000) / median3((double)(20), str_float(state[16], (double)(100)), (double)(100))));
     (void)v_supply_spin;
     double v_t_pool_out = (v_t_pool + median3((double)(0), (str_float(v_t_sup, (double)(0)) - str_float(v_t_ret, (double)(0))), (double)(40)));
     (void)v_t_pool_out;
@@ -201,7 +204,7 @@ void widget_render(struct buf *out, const char *const *state)
     buf_add(out, "\" stroke-width=\"8\"/><path d=\"M165 118 H217\" fill=\"none\" stroke=\"", 64);
     m_tcol(out, state, jv_s(v_t_sup));
     buf_add(out, "\" stroke-width=\"8\"/><g id=\"valve3w\">", 36);
-    if (((v_dhw_on || ((!v_demo) && (strcmp(state[16], "on") == 0))) || v_rad_on)) {
+    if (((v_dhw_on || ((!v_demo) && (strcmp(state[17], "on") == 0))) || v_rad_on)) {
         buf_add(out,
             "<path d=\"M153.5 192 V140\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" str"
             "oke-dasharray=\"18.0 34.0\" style=\"animation:vpdW 2.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-"
@@ -270,7 +273,7 @@ void widget_render(struct buf *out, const char *const *state)
         , 347);
     buf_str(out, state[5]);
     buf_add(out, "&#176;</text>", 13);
-    if ((v_demo || (strcmp(state[17], "on") == 0))) {
+    if ((v_demo || (strcmp(state[18], "on") == 0))) {
         buf_add(out,
             "<path d=\"M26.5 152 V146 Q26.5 138.5 34 138.5 H59 Q66.5 138.5 66.5 146 V190\" fill=\"none\" stroke=\"#fff"
             "fff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"18.1 14.8\" style=\"animation:vpd0 3."
@@ -296,7 +299,7 @@ void widget_render(struct buf *out, const char *const *state)
             "4');offset-rotate:auto;animation:vpoffs 3.4s linear infinite;animation-delay:-2.89s\"/>"
             , 2186);
     }
-    if ((v_demo || (strcmp(state[18], "on") == 0))) {
+    if ((v_demo || (strcmp(state[19], "on") == 0))) {
         buf_add(out,
             "<path d=\"M81.5 190 V152 Q81.5 138.5 95 138.5 H128 Q141 138.5 141 152 V186\" fill=\"none\" stroke=\"#ffff"
             "ff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"13.6 11.1\" style=\"animation:vpd2 5.5"
@@ -374,7 +377,7 @@ void widget_render(struct buf *out, const char *const *state)
             "te:auto;animation:vpoffs 2.6s linear infinite;animation-delay:-1.83s\"/>"
             , 771);
     }
-    if (((!v_demo) && (strcmp(state[16], "on") == 0))) {
+    if (((!v_demo) && (strcmp(state[17], "on") == 0))) {
         buf_add(out, "<style>.vppoolwave{fill:none;stroke:", 36);
         m_pcol(out, state, jv_d(v_t_pool));
         buf_add(out,
@@ -388,87 +391,153 @@ void widget_render(struct buf *out, const char *const *state)
             "224.5 125.5 V238.5 Q224.5 246 232 246\" fill=\"none\" stroke=\""
             , 159);
         m_tcol(out, state, jv_s(v_t_sup));
+        buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\" stroke-linejoin=\"round\"/>", 66);
+        if (v_is_buffer) {
+            buf_add(out, "<path d=\"M258 246 H300\" fill=\"none\" stroke=\"", 44);
+            m_pcol(out, state, jv_d(v_t_pool_out));
+            buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><path d=\"M258 270 H300\" fill=\"none\" stroke=\"", 86);
+            m_pcol(out, state, jv_d(v_t_pool));
+            buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/>", 42);
+        } else {
+            buf_add(out, "<path d=\"M258 246 H300\" fill=\"none\" stroke=\"", 44);
+            m_pcol(out, state, jv_d(v_t_pool));
+            buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><path d=\"M258 270 H300\" fill=\"none\" stroke=\"", 86);
+            m_pcol(out, state, jv_d(v_t_pool_out));
+            buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/>", 42);
+        }
         buf_add(out,
-            "\" stroke-width=\"8\" stroke-linecap=\"butt\" stroke-linejoin=\"round\"/><path d=\"M258 246 H300\" fill=\"none"
-            "\" stroke=\""
-            , 110);
-        m_pcol(out, state, jv_d(v_t_pool));
-        buf_add(out, "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><path d=\"M258 270 H300\" fill=\"none\" stroke=\"", 86);
-        m_pcol(out, state, jv_d(v_t_pool_out));
-        buf_add(out,
-            "\" stroke-width=\"8\" stroke-linecap=\"butt\"/><rect x=\"232\" y=\"234\" width=\"26\" height=\"48\" rx=\"3\" fill=\""
-            "#ffffff\" stroke=\"#78909c\" stroke-width=\"2\"/><line x1=\"232\" y1=\"282\" x2=\"258\" y2=\"234\" stroke=\"#78909"
-            "c\" stroke-width=\"1.6\"/><circle cx=\"232\" cy=\"246\" r=\"2.6\" fill=\"#78909c\"/><circle cx=\"232\" cy=\"270\" r"
-            "=\"2.6\" fill=\"#78909c\"/><circle cx=\"258\" cy=\"246\" r=\"2.6\" fill=\"#78909c\"/><circle cx=\"258\" cy=\"270\" r"
-            "=\"2.6\" fill=\"#78909c\"/><text x=\"245\" y=\"294\" text-anchor=\"middle\" font-size=\"7.5\" fill=\"#78909c\">VVX"
-            "</text><path d=\"M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 "
-            "287 V254\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"1"
-            "4.7 12.1\" style=\"animation:vpd9 5.2s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"n"
-            "one\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offse"
-            "t-path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287"
-            " V254');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-0.57s\"/><path d=\"M"
-            "-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" s"
-            "troke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 21"
-            "7 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;"
-            "animation-delay:-1.61s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-w"
-            "idth=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 2"
-            "70 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;ani"
-            "mation:vpoffs 5.2s linear infinite;animation-delay:-2.65s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fi"
-            "ll=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\""
-            "offset-path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153."
-            "5 287 V254');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-3.69s\"/><path"
-            " d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"rou"
-            "nd\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294"
-            ".5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs 5.2s linear infi"
-            "nite;animation-delay:-4.73s\"/><path d=\"M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 24"
-            "6\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"20.0 16."
-            "7\" style=\"animation:vpd10 5.2s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" s"
-            "troke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path"
-            ":path('M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation"
-            ":vpoffs 5.2s linear infinite;animation-delay:-0.57s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"no"
-            "ne\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset"
-            "-path:path('M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;anim"
-            "ation:vpoffs 5.2s linear infinite;animation-delay:-1.61s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fil"
-            "l=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"o"
-            "ffset-path:path('M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto"
-            ";animation:vpoffs 5.2s linear infinite;animation-delay:-2.65s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4"
-            "\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" sty"
-            "le=\"offset-path:path('M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate"
-            ":auto;animation:vpoffs 5.2s linear infinite;animation-delay:-3.69s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1."
-            "6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round"
-            "\" style=\"offset-path:path('M170 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-r"
-            "otate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-4.73s\"/><path d=\"M298 246 H260\" fi"
-            "ll=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"20.0 18.0\" st"
-            "yle=\"animation:vpd11 1.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke"
-            "=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path"
-            "('M298 246 H260');offset-rotate:auto;animation:vpoffs 1.4s linear infinite;animation-delay:-0.74s\"/>"
-            "<path d=\"M260 270 H298\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" strok"
-            "e-dasharray=\"20.0 18.0\" style=\"animation:vpd12 1.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1"
-            ".6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"roun"
-            "d\" style=\"offset-path:path('M260 270 H298');offset-rotate:auto;animation:vpoffs 1.4s linear infinite"
-            ";animation-delay:-0.74s\"/><rect x=\"300\" y=\"233\" width=\"78\" height=\"48\" rx=\"9\" fill=\""
-            , 5084);
-        m_pcol(out, state, jv_d(v_t_pool));
-        buf_add(out, "\" fill-opacity=\"0.14\" stroke=\"", 30);
-        m_pcol(out, state, jv_d(v_t_pool));
-        buf_add(out,
-            "\" stroke-width=\"2\"/><g class=\"vppoolwave\"><path d=\"M308 250 q6,-6 12,0 t12,0 t12,0 t12,0 t12,0\"/><pa"
-            "th d=\"M308 264 q6,-6 12,0 t12,0 t12,0 t12,0 t12,0\"/></g><text x=\"339\" y=\"228\" text-anchor=\"middle\" f"
-            "ont-size=\"10\" fill=\"#90a4ae\">"
-            , 229);
+            "<rect x=\"232\" y=\"234\" width=\"26\" height=\"48\" rx=\"3\" fill=\"#ffffff\" stroke=\"#78909c\" stroke-width=\"2\""
+            "/><line x1=\"232\" y1=\"282\" x2=\"258\" y2=\"234\" stroke=\"#78909c\" stroke-width=\"1.6\"/><circle cx=\"232\" cy"
+            "=\"246\" r=\"2.6\" fill=\"#78909c\"/><circle cx=\"232\" cy=\"270\" r=\"2.6\" fill=\"#78909c\"/><circle cx=\"258\" cy"
+            "=\"246\" r=\"2.6\" fill=\"#78909c\"/><circle cx=\"258\" cy=\"270\" r=\"2.6\" fill=\"#78909c\"/><text x=\"245\" y=\"29"
+            "4\" text-anchor=\"middle\" font-size=\"7.5\" fill=\"#78909c\">VVX</text><path d=\"M231 270 Q224.5 270 224.5 "
+            "277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254\" fill=\"none\" stroke=\"#ffffff\" str"
+            "oke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"14.7 12.1\" style=\"animation:vpd9 5.2s linea"
+            "r infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" s"
+            "troke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277"
+            ".5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoff"
+            "s 5.2s linear infinite;animation-delay:-0.57s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" st"
+            "roke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:"
+            "path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254')"
+            ";offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-1.61s\"/><path d=\"M-1.6 -3"
+            ".4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-l"
+            "inejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5"
+            " H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animati"
+            "on-delay:-2.65s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2"
+            ".6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M231 270 Q224.5 270 224."
+            "5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V254');offset-rotate:auto;animation:"
+            "vpoffs 5.2s linear infinite;animation-delay:-3.69s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"non"
+            "e\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-"
+            "path:path('M231 270 Q224.5 270 224.5 277.5 V287 Q224.5 294.5 217 294.5 H162 Q153.5 294.5 153.5 287 V"
+            "254');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animation-delay:-4.73s\"/><path d=\"M17"
+            "0 118 H217 Q224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246\" fill=\"none\" stroke=\"#ffffff\" stroke-wid"
+            "th=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"20.0 16.7\" style=\"animation:vpd10 5.2s linear infi"
+            "nite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-"
+            "linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q224.5 118 224.5 125."
+            "5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animation-del"
+            "ay:-0.57s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" st"
+            "roke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q224.5 118 224.5"
+            " 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;animatio"
+            "n-delay:-1.61s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2."
+            "6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q224.5 118 "
+            "224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear infinite;ani"
+            "mation-delay:-2.65s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-widt"
+            "h=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q224.5"
+            " 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear infinit"
+            "e;animation-delay:-3.69s\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke"
+            "-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"offset-path:path('M170 118 H217 Q"
+            "224.5 118 224.5 125.5 V238.5 Q224.5 246 231 246');offset-rotate:auto;animation:vpoffs 5.2s linear in"
+            "finite;animation-delay:-4.73s\"/>"
+            , 4132);
+        if (v_is_buffer) {
+            buf_add(out,
+                "<path d=\"M260 246 H298\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" strok"
+                "e-dasharray=\"20.0 18.0\" style=\"animation:vpd11 1.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1"
+                ".6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"roun"
+                "d\" style=\"offset-path:path('M260 246 H298');offset-rotate:auto;animation:vpoffs 1.4s linear infinite"
+                ";animation-delay:-0.74s\"/><path d=\"M298 270 H260\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" st"
+                "roke-linecap=\"round\" stroke-dasharray=\"20.0 18.0\" style=\"animation:vpd12 1.4s linear infinite\"/><pat"
+                "h d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"ro"
+                "und\" stroke-linejoin=\"round\" style=\"offset-path:path('M298 270 H260');offset-rotate:auto;animation:v"
+                "poffs 1.4s linear infinite;animation-delay:-0.74s\"/>"
+                , 852);
+        } else {
+            buf_add(out,
+                "<path d=\"M298 246 H260\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" strok"
+                "e-dasharray=\"20.0 18.0\" style=\"animation:vpd11 1.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-1"
+                ".6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"roun"
+                "d\" style=\"offset-path:path('M298 246 H260');offset-rotate:auto;animation:vpoffs 1.4s linear infinite"
+                ";animation-delay:-0.74s\"/><path d=\"M260 270 H298\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" st"
+                "roke-linecap=\"round\" stroke-dasharray=\"20.0 18.0\" style=\"animation:vpd12 1.4s linear infinite\"/><pat"
+                "h d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"ro"
+                "und\" stroke-linejoin=\"round\" style=\"offset-path:path('M260 270 H298');offset-rotate:auto;animation:v"
+                "poffs 1.4s linear infinite;animation-delay:-0.74s\"/>"
+                , 852);
+        }
+        if (v_is_buffer) {
+            buf_add(out, "<rect x=\"297\" y=\"230\" width=\"40\" height=\"54\" rx=\"13\" fill=\"none\" stroke=\"", 73);
+            m_pcol(out, state, jv_d(v_t_pool));
+            buf_add(out, "\" stroke-width=\"1\" stroke-opacity=\"0.4\"/><rect x=\"300\" y=\"233\" width=\"34\" height=\"48\" rx=\"10\" fill=\"", 100);
+            m_pcol(out, state, jv_d(v_t_pool));
+            buf_add(out, "\" fill-opacity=\"0.14\" stroke=\"", 30);
+            m_pcol(out, state, jv_d(v_t_pool));
+            buf_add(out, "\" stroke-width=\"2\"/><line x1=\"306\" y1=\"242\" x2=\"328\" y2=\"242\" stroke=\"", 70);
+            m_pcol(out, state, jv_d(v_t_pool_out));
+            buf_add(out,
+                "\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-opacity=\"0.85\"/><line x1=\"306\" y1=\"252\" x2=\"328\" y2"
+                "=\"252\" stroke=\""
+                , 115);
+            m_pcol(out, state, jv_d(((v_t_pool + v_t_pool_out) / (double)(2))));
+            buf_add(out,
+                "\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-opacity=\"0.65\"/><line x1=\"306\" y1=\"262\" x2=\"328\" y2"
+                "=\"262\" stroke=\""
+                , 115);
+            m_pcol(out, state, jv_d(((((double)(3) * v_t_pool) + v_t_pool_out) / (double)(4))));
+            buf_add(out,
+                "\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-opacity=\"0.5\"/><line x1=\"306\" y1=\"272\" x2=\"328\" y2="
+                "\"272\" stroke=\""
+                , 114);
+            m_pcol(out, state, jv_d(v_t_pool));
+            buf_add(out,
+                "\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-opacity=\"0.35\"/><circle cx=\"300\" cy=\"246\" r=\"2.6\" f"
+                "ill=\"#78909c\"/><circle cx=\"300\" cy=\"270\" r=\"2.6\" fill=\"#78909c\"/>"
+                , 165);
+        } else {
+            buf_add(out, "<rect x=\"300\" y=\"233\" width=\"78\" height=\"48\" rx=\"9\" fill=\"", 58);
+            m_pcol(out, state, jv_d(v_t_pool));
+            buf_add(out, "\" fill-opacity=\"0.14\" stroke=\"", 30);
+            m_pcol(out, state, jv_d(v_t_pool));
+            buf_add(out,
+                "\" stroke-width=\"2\"/><g class=\"vppoolwave\"><path d=\"M308 250 q6,-6 12,0 t12,0 t12,0 t12,0 t12,0\"/><pa"
+                "th d=\"M308 264 q6,-6 12,0 t12,0 t12,0 t12,0 t12,0\"/></g>"
+                , 156);
+        }
+        buf_add(out, "<text x=\"339\" y=\"228\" text-anchor=\"middle\" font-size=\"10\" fill=\"#90a4ae\">", 73);
         buf_str(out, state[7]);
         buf_add(out, "&#176; &#8594; ", 15);
         buf_str(out, state[8]);
-        buf_add(out, "&#176;</text><text x=\"339\" y=\"297\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"bold\" fill=\"", 96);
+        buf_add(out, "&#176;</text><text x=\"", 22);
+        if (v_is_buffer) {
+            buf_add(out, "317", 3);
+        } else {
+            buf_add(out, "339", 3);
+        }
+        buf_add(out, "\" y=\"297\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"bold\" fill=\"", 71);
         m_pcol(out, state, jv_d(v_t_pool));
-        buf_add(out, "\">POOL</text>", 13);
+        buf_add(out, "\">", 2);
+        if (v_is_buffer) {
+            buf_add(out, "BUFFER", 6);
+        } else {
+            buf_add(out, "POOL", 4);
+        }
+        buf_add(out, "</text>", 7);
     }
     buf_add(out,
         "</svg></div> <div class=\"hpwidget-val\" title=\"Time\" style=\"position:absolute;top:303px;left:20px;wid"
         "th:auto;height:auto;white-space:nowrap;padding:0 4px;z-index:3;\"><span class=\"hpwidget-name-span\" id"
         "=\"hpwidget-timestamp_d\">"
         , 224);
-    buf_str(out, state[19]);
+    buf_str(out, state[20]);
     buf_add(out,
         "</span><span class=\"hpwidget-unit-span\"></span></div> <div class=\"hpwidget-val\" title=\"Brine in\" sty"
         "le=\"position:absolute;top:84px;left:8px;z-index:3;\">           <span class=\"hpwidget-name-span\" id=\""
@@ -482,12 +551,12 @@ void widget_render(struct buf *out, const char *const *state)
         , 228);
     buf_str(out, state[1]);
     buf_add(out, "</span><span class=\"hpwidget-unit-span\">&deg;C</span></div>  ", 61);
-    if ((strcmp(state[20], "on") == 0)) {
+    if ((strcmp(state[21], "on") == 0)) {
         buf_add(out,
             "<div class=\"hpwidget-val\" title=\"HGW Temperature\" style=\"position:absolute;top:87px;left:76px;z-inde"
             "x:3;\"><span class=\"hpwidget-name-span\" id=\"hpwidget-HGW_VV\"></span>"
             , 167);
-        buf_str(out, state[21]);
+        buf_str(out, state[22]);
         buf_add(out, "<span class=\"hpwidget-unit-span\">&deg;C</span></div>", 52);
     }
     buf_add(out,
@@ -499,20 +568,20 @@ void widget_render(struct buf *out, const char *const *state)
         "<span class=\"hpwidget-unit-span\">&deg;C</span></div> <div class=\"hpwidget-val\" title=\"Supply pump\" s"
         "tyle=\"position:absolute;top:257px;left:146px;z-index:3;"
         , 155);
-    if ((strcmp(state[22], "off") == 0)) {
+    if ((strcmp(state[23], "off") == 0)) {
         buf_add(out, "display:none;", 13);
     }
     buf_add(out, "\"><span class=\"hpwidget-name-span\" id=\"hpwidget-CIRK_SPEED\"></span>", 67);
-    buf_str(out, state[15]);
+    buf_str(out, state[16]);
     buf_add(out,
         "<span class=\"hpwidget-unit-span\">&nbsp;%</span></div> <div class=\"hpwidget-val\" title=\"Brine pump\" s"
         "tyle=\"position:absolute;top:156px;left:2px;z-index:3;"
         , 153);
-    if ((strcmp(state[22], "off") == 0)) {
+    if ((strcmp(state[23], "off") == 0)) {
         buf_add(out, "display:none;", 13);
     }
     buf_add(out, "\"><span class=\"hpwidget-name-span\" id=\"hpwidget-BRINE_SPEED\"></span>", 68);
-    buf_str(out, state[14]);
+    buf_str(out, state[15]);
     buf_add(out,
         "<span class=\"hpwidget-unit-span\">&nbsp;%</span></div> <div class=\"hpwidget-val\" title=\"Return line T"
         "emperature\" style=\"position:absolute;top:205px;left:131px;z-index:3;\"><span class=\"hpwidget-name-spa"
@@ -529,7 +598,7 @@ void widget_render(struct buf *out, const char *const *state)
         "<span class=\"hpwidget-unit-span\">&deg;C</span></div> <ha-icon icon=\"mdi:flash\" id=\"hpwidget-ELEFF\" s"
         "tyle=\"color:yellow;position:absolute;top:42px;left:82px;z-index:2;"
         , 166);
-    if (((strcmp(state[23], "off") == 0) && (strcmp(state[24], "off") == 0))) {
+    if (((strcmp(state[24], "off") == 0) && (strcmp(state[25], "off") == 0))) {
         buf_add(out, "display:none", 12);
     }
     buf_add(out,
@@ -543,7 +612,7 @@ void widget_render(struct buf *out, const char *const *state)
         "1.30px,-0.75px)}100%{transform:translate(1.50px,-0.00px)}}</style><svg width=\"44\" height=\"62\" viewBo"
         "x=\"0 0 40 58\" class=\"vppis"
         , 826);
-    if ((v_demo || (strcmp(state[18], "on") == 0))) {
+    if ((v_demo || (strcmp(state[19], "on") == 0))) {
         buf_add(out, " vppis-run", 10);
     }
     buf_add(out,
@@ -573,7 +642,7 @@ void widget_render(struct buf *out, const char *const *state)
         "\"1.6\"/><circle cx=\"13\" cy=\"13\" r=\"11.5\" fill=\"#cfd8dc99\"/><g style=\"transform-origin:0px 0px;transfo"
         "rm:translate(13px,13px);"
         , 2424);
-    if ((v_demo || (strcmp(state[17], "on") == 0))) {
+    if ((v_demo || (strcmp(state[18], "on") == 0))) {
         buf_add(out, "animation: vpimp ", 17);
         buf_double(out, v_brine_spin);
         buf_add(out, "ms linear infinite;", 19);
@@ -613,14 +682,14 @@ void widget_render(struct buf *out, const char *const *state)
         "ha-icon icon=\"mdi:alert-circle\" id=\"hpwidget-ALERT\" style=\"color:red;position:absolute;top:42px;left"
         ":82px;z-index:4;animation: blink  1s steps(5, start) infinite;"
         , 1162);
-    if ((strcmp(state[25], "Ok") == 0)) {
+    if ((strcmp(state[26], "Ok") == 0)) {
         buf_add(out, "display:none", 12);
     }
     buf_add(out,
         "\"></ha-icon> <ha-icon icon=\"mdi:stop\" id=\"hpwidget-EVU\" style=\"color:red;position:absolute;top:62px;"
         "left:82px;z-index:3;animation: blink  1s steps(5, start) infinite;"
         , 166);
-    if ((strcmp(state[26], "on") == 0)) {
+    if ((strcmp(state[27], "on") == 0)) {
         buf_add(out, " ", 1);
     } else {
         buf_add(out, "display:none", 12);
@@ -629,7 +698,7 @@ void widget_render(struct buf *out, const char *const *state)
         "\">EVU</ha-icon> </div> <div class=\"hpwidget-vald\" title=\"Indoor Temperature\" style=\"position:absolut"
         "e;top:72px;left: 221px;z-index:2;\"><span class=\"hpwidget-name-span\" id=\"hpwidget-INDR_T\"></span>"
         , 196);
-    buf_str(out, state[27]);
+    buf_str(out, state[28]);
     buf_add(out,
         "<span class=\"hpwidget-unit-spand\">&deg;C</span></div> <div class=\"hpwidget-vald\" title=\"Outdoor Temp"
         "erature\" style=\"position:absolute;top:14px;left:221px;z-index:2;\"><span class=\"hpwidget-name-span\" i"
