@@ -27,6 +27,8 @@ const struct widget_entity WIDGET_ENTITIES[] = {
     {"binary_sensor.thermiq_mqtt_vp1_supply_pump_on", "binary_sensor", "supply_pump_on", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_outdoor_t", "sensor", "outdoor_t", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_heating_stop_t", "sensor", "heating_stop_t", WE_REGISTER},
+    {"sensor.thermiq_mqtt_vp1_brine_pump_speed", "sensor", "brine_pump_speed", WE_REGISTER},
+    {"sensor.thermiq_mqtt_vp1_supply_pump_speed", "sensor", "supply_pump_speed", WE_REGISTER},
     {"binary_sensor.pool_heating_active", "binary_sensor", NULL, WE_POOL},
     {"binary_sensor.thermiq_mqtt_vp1_brine_pump_on", "binary_sensor", "brine_pump_on", WE_REGISTER},
     {"binary_sensor.thermiq_mqtt_vp1_compressor_on", "binary_sensor", "compressor_on", WE_REGISTER},
@@ -34,8 +36,6 @@ const struct widget_entity WIDGET_ENTITIES[] = {
     {"binary_sensor.thermiq_mqtt_vp1_opt_hgw_installed", "binary_sensor", "opt_hgw_installed", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_hgw_water_t", "sensor", "hgw_water_t", WE_REGISTER},
     {"binary_sensor.thermiq_mqtt_vp1_opt_optimum_installed", "binary_sensor", "opt_optimum_installed", WE_REGISTER},
-    {"sensor.thermiq_mqtt_vp1_supply_pump_speed", "sensor", "supply_pump_speed", WE_REGISTER},
-    {"sensor.thermiq_mqtt_vp1_brine_pump_speed", "sensor", "brine_pump_speed", WE_REGISTER},
     {"binary_sensor.thermiq_mqtt_vp1_boiler_3kw_on", "binary_sensor", "boiler_3kw_on", WE_REGISTER},
     {"binary_sensor.thermiq_mqtt_vp1_boiler_6kw_on", "binary_sensor", "boiler_6kw_on", WE_REGISTER},
     {"sensor.thermiq_mqtt_vp1_communication_status", "sensor", "communication_status", WE_REGISTER},
@@ -139,7 +139,11 @@ void widget_render(struct buf *out, const char *const *state)
     (void)v_rad_on;
     bool v_circ_on = (v_demo || (strcmp(state[11], "on") == 0));
     (void)v_circ_on;
-    double v_t_pool_out = (v_t_pool + median3((double)(0), (str_float(v_t_sup, (double)(0)) - str_float(v_t_ret, (double)(0))), (double)(3)));
+    double v_brine_spin = rint(((double)(90000) / median3((double)(20), str_float(state[14], (double)(100)), (double)(100))));
+    (void)v_brine_spin;
+    double v_supply_spin = rint(((double)(90000) / median3((double)(20), str_float(state[15], (double)(100)), (double)(100))));
+    (void)v_supply_spin;
+    double v_t_pool_out = (v_t_pool + median3((double)(0), (str_float(v_t_sup, (double)(0)) - str_float(v_t_ret, (double)(0))), (double)(40)));
     (void)v_t_pool_out;
     buf_add(out,
         "<div style=\"position:absolute;top:0px;left:0px;z-index:2;pointer-events:none;\"><style>@keyframes vpd"
@@ -197,7 +201,7 @@ void widget_render(struct buf *out, const char *const *state)
     buf_add(out, "\" stroke-width=\"8\"/><path d=\"M165 118 H217\" fill=\"none\" stroke=\"", 64);
     m_tcol(out, state, jv_s(v_t_sup));
     buf_add(out, "\" stroke-width=\"8\"/><g id=\"valve3w\">", 36);
-    if (((v_dhw_on || ((!v_demo) && (strcmp(state[14], "on") == 0))) || v_rad_on)) {
+    if (((v_dhw_on || ((!v_demo) && (strcmp(state[16], "on") == 0))) || v_rad_on)) {
         buf_add(out,
             "<path d=\"M153.5 192 V140\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" str"
             "oke-dasharray=\"18.0 34.0\" style=\"animation:vpdW 2.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-"
@@ -266,7 +270,7 @@ void widget_render(struct buf *out, const char *const *state)
         , 347);
     buf_str(out, state[5]);
     buf_add(out, "&#176;</text>", 13);
-    if ((v_demo || (strcmp(state[15], "on") == 0))) {
+    if ((v_demo || (strcmp(state[17], "on") == 0))) {
         buf_add(out,
             "<path d=\"M26.5 152 V146 Q26.5 138.5 34 138.5 H59 Q66.5 138.5 66.5 146 V190\" fill=\"none\" stroke=\"#fff"
             "fff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"18.1 14.8\" style=\"animation:vpd0 3."
@@ -292,7 +296,7 @@ void widget_render(struct buf *out, const char *const *state)
             "4');offset-rotate:auto;animation:vpoffs 3.4s linear infinite;animation-delay:-2.89s\"/>"
             , 2186);
     }
-    if ((v_demo || (strcmp(state[16], "on") == 0))) {
+    if ((v_demo || (strcmp(state[18], "on") == 0))) {
         buf_add(out,
             "<path d=\"M81.5 190 V152 Q81.5 138.5 95 138.5 H128 Q141 138.5 141 152 V186\" fill=\"none\" stroke=\"#ffff"
             "ff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-dasharray=\"13.6 11.1\" style=\"animation:vpd2 5.5"
@@ -370,7 +374,7 @@ void widget_render(struct buf *out, const char *const *state)
             "te:auto;animation:vpoffs 2.6s linear infinite;animation-delay:-1.83s\"/>"
             , 771);
     }
-    if (((!v_demo) && (strcmp(state[14], "on") == 0))) {
+    if (((!v_demo) && (strcmp(state[16], "on") == 0))) {
         buf_add(out, "<style>.vppoolwave{fill:none;stroke:", 36);
         m_pcol(out, state, jv_d(v_t_pool));
         buf_add(out,
@@ -464,7 +468,7 @@ void widget_render(struct buf *out, const char *const *state)
         "th:auto;height:auto;white-space:nowrap;padding:0 4px;z-index:3;\"><span class=\"hpwidget-name-span\" id"
         "=\"hpwidget-timestamp_d\">"
         , 224);
-    buf_str(out, state[17]);
+    buf_str(out, state[19]);
     buf_add(out,
         "</span><span class=\"hpwidget-unit-span\"></span></div> <div class=\"hpwidget-val\" title=\"Brine in\" sty"
         "le=\"position:absolute;top:84px;left:8px;z-index:3;\">           <span class=\"hpwidget-name-span\" id=\""
@@ -478,12 +482,12 @@ void widget_render(struct buf *out, const char *const *state)
         , 228);
     buf_str(out, state[1]);
     buf_add(out, "</span><span class=\"hpwidget-unit-span\">&deg;C</span></div>  ", 61);
-    if ((strcmp(state[18], "on") == 0)) {
+    if ((strcmp(state[20], "on") == 0)) {
         buf_add(out,
             "<div class=\"hpwidget-val\" title=\"HGW Temperature\" style=\"position:absolute;top:87px;left:76px;z-inde"
             "x:3;\"><span class=\"hpwidget-name-span\" id=\"hpwidget-HGW_VV\"></span>"
             , 167);
-        buf_str(out, state[19]);
+        buf_str(out, state[21]);
         buf_add(out, "<span class=\"hpwidget-unit-span\">&deg;C</span></div>", 52);
     }
     buf_add(out,
@@ -495,20 +499,20 @@ void widget_render(struct buf *out, const char *const *state)
         "<span class=\"hpwidget-unit-span\">&deg;C</span></div> <div class=\"hpwidget-val\" title=\"Supply pump\" s"
         "tyle=\"position:absolute;top:257px;left:146px;z-index:3;"
         , 155);
-    if ((strcmp(state[20], "off") == 0)) {
+    if ((strcmp(state[22], "off") == 0)) {
         buf_add(out, "display:none;", 13);
     }
     buf_add(out, "\"><span class=\"hpwidget-name-span\" id=\"hpwidget-CIRK_SPEED\"></span>", 67);
-    buf_str(out, state[21]);
+    buf_str(out, state[15]);
     buf_add(out,
         "<span class=\"hpwidget-unit-span\">&nbsp;%</span></div> <div class=\"hpwidget-val\" title=\"Brine pump\" s"
         "tyle=\"position:absolute;top:156px;left:2px;z-index:3;"
         , 153);
-    if ((strcmp(state[20], "off") == 0)) {
+    if ((strcmp(state[22], "off") == 0)) {
         buf_add(out, "display:none;", 13);
     }
     buf_add(out, "\"><span class=\"hpwidget-name-span\" id=\"hpwidget-BRINE_SPEED\"></span>", 68);
-    buf_str(out, state[22]);
+    buf_str(out, state[14]);
     buf_add(out,
         "<span class=\"hpwidget-unit-span\">&nbsp;%</span></div> <div class=\"hpwidget-val\" title=\"Return line T"
         "emperature\" style=\"position:absolute;top:205px;left:131px;z-index:3;\"><span class=\"hpwidget-name-spa"
@@ -539,7 +543,7 @@ void widget_render(struct buf *out, const char *const *state)
         "1.30px,-0.75px)}100%{transform:translate(1.50px,-0.00px)}}</style><svg width=\"44\" height=\"62\" viewBo"
         "x=\"0 0 40 58\" class=\"vppis"
         , 826);
-    if ((v_demo || (strcmp(state[16], "on") == 0))) {
+    if ((v_demo || (strcmp(state[18], "on") == 0))) {
         buf_add(out, " vppis-run", 10);
     }
     buf_add(out,
@@ -569,8 +573,10 @@ void widget_render(struct buf *out, const char *const *state)
         "\"1.6\"/><circle cx=\"13\" cy=\"13\" r=\"11.5\" fill=\"#cfd8dc99\"/><g style=\"transform-origin:0px 0px;transfo"
         "rm:translate(13px,13px);"
         , 2424);
-    if ((v_demo || (strcmp(state[15], "on") == 0))) {
-        buf_add(out, "animation: vpimp 1.5s linear infinite;", 38);
+    if ((v_demo || (strcmp(state[17], "on") == 0))) {
+        buf_add(out, "animation: vpimp ", 17);
+        buf_double(out, v_brine_spin);
+        buf_add(out, "ms linear infinite;", 19);
     }
     buf_add(out,
         "\"><path d=\"M0 0 Q5.5 -1 7 -6\" fill=\"none\" stroke=\"#90a4ae\" stroke-width=\"4\" stroke-linecap=\"round\"/>"
@@ -589,7 +595,9 @@ void widget_render(struct buf *out, const char *const *state)
         " 0px;transform:translate(13px,13px);"
         , 1336);
     if ((v_demo || (strcmp(state[11], "on") == 0))) {
-        buf_add(out, "animation: vpimp 1.5s linear infinite;", 38);
+        buf_add(out, "animation: vpimp ", 17);
+        buf_double(out, v_supply_spin);
+        buf_add(out, "ms linear infinite;", 19);
     }
     buf_add(out,
         "\"><path d=\"M0 0 Q5.5 -1 7 -6\" fill=\"none\" stroke=\"#90a4ae\" stroke-width=\"4\" stroke-linecap=\"round\"/>"
