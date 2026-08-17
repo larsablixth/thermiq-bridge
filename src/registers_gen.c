@@ -137,7 +137,7 @@ const struct reg_def REGISTERS[] = {
         .unit = "°C",
         .panel = 2,
         .panel_order = 9,
-        .names = {"Pool temp actual", "Framledn.temp., shunt", "Menovesi lämpötila, shuntti", "Tur temp., shunt", "Vorlauftemperatur, Mischer"},
+        .names = {"Shunt supply temp.", "Framledn.temp., shunt", "Menovesi lämpötila, shuntti", "Tur temp., shunt", "Vorlauftemperatur, Mischer"},
     },
     {
         .key = "current_consumed_a",
@@ -863,7 +863,7 @@ const struct reg_def REGISTERS[] = {
         .has_bounds = true,
         .panel = 6,
         .panel_order = 3,
-        .names = {"Pool temp target", "Shunt kurva, bör", "Shuntin käyrä, haluttu", "Shunt Kurve, bør", "Mischer Kurve, Soll"},
+        .names = {"Curve 2 target", "Shunt kurva, bör", "Shuntin käyrä, haluttu", "Shunt Kurve, bør", "Mischer Kurve, Soll"},
     },
     {
         .key = "integral2_curve_actual",

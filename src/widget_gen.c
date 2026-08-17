@@ -213,11 +213,12 @@ void widget_render(struct buf *out, const char *const *state)
     if (((v_dhw_on || ((!v_demo) && (strcmp(state[16], "on") == 0))) || v_rad_on)) {
         buf_add(out,
             "<path d=\"M153.5 192 V140\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" str"
-            "oke-dasharray=\"18.0 34.0\" style=\"animation:vpdW 2.4s linear infinite\"/><path d=\"M-1.6 -3.4 L2.6 0 L-"
-            "1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"rou"
-            "nd\" style=\"offset-path:path('M153.5 192 V140');offset-rotate:auto;animation:vpoffs calc(2.4s * 100 /"
-            " var(--vpw)) linear infinite;animation-delay:calc(-0.83s * 100 / var(--vpw))\"/>"
-            , 479);
+            "oke-dasharray=\"18.0 34.0\" style=\"animation:vpdW calc(2.4s * 100 / var(--vpw)) linear infinite\"/><pat"
+            "h d=\"M-1.6 -3.4 L2.6 0 L-1.6 3.4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.6\" stroke-linecap=\"ro"
+            "und\" stroke-linejoin=\"round\" style=\"offset-path:path('M153.5 192 V140');offset-rotate:auto;animation"
+            ":vpoffs calc(2.4s * 100 / var(--vpw)) linear infinite;animation-delay:calc(-0.83s * 100 / var(--vpw)"
+            ")\"/>"
+            , 504);
     }
     if (v_dhw_on) {
         buf_add(out, "<path d=\"M147 118 H121 Q113 118 113 110 V88\" fill=\"none\" stroke=\"", 65);
