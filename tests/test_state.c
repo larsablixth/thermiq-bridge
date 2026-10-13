@@ -367,9 +367,9 @@ static void test_number_formatting_matches_python(void)
 
 /* ---- capability detection ------------------------------------------- */
 /* EVU is ThermIQ-Room2 only; the room-sensor setpoint needs a Room or a
- * Room2. The pump says which it is by what it puts in /data - confirmed by
- * ThermIQ: "the mqtt message will only contain EVU or INDR_T if it's
- * supported by the hw". */
+ * Room2. For INDR_T what the pump puts in /data says which; for EVU it does
+ * not, on modern firmware - see the interface cases further down. The
+ * fixtures here carry no app_info, so they exercise the fallback. */
 
 static struct pump_state plain_mqtt_state(void)
 {
@@ -410,6 +410,125 @@ static void test_unsupported_register_reads_as_unavailable(void)
     CHECK_STR(text, "unavailable");
     entity(&state, "number", "room_sensor_set_t", text, sizeof(text));
     CHECK_STR(text, "unavailable");
+}
+
+/* EVU is decided by the interface, not by whether the pump sends it. ThermIQ,
+ * with the firmware source in front of them (#37 in the integration):
+ *
+ *   "EVU is always available in all modern FW regardless if it is supported
+ *    towards HP or not."
+ *   "INDR_T is only available if HW supports it, ThermIQ-room and
+ *    ThermIQ-room2 support, ThermIQ-mqtt does not."
+ *
+ * So INDR_T in /data describes the hardware and EVU only dates the firmware.
+ * plain_mqtt_state() above is old firmware that sends neither, which is why
+ * the two looked alike until now. */
+
+static void test_modern_plain_mqtt_sends_evu_and_still_cannot_drive_it(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"ThermIQ-mqtt 2.90\", "
+                   "\"d0\": 21, \"EVU\": 0}");
+    struct write_topics t = topics(false);
+    struct write_message message;
+    CHECK(state_encode_write(&state, &t, "heatpump_evu_block", 1, &message)
+          == WRITE_UNSUPPORTED);
+    char text[STATE_STRING_MAX];
+    entity(&state, "switch", "heatpump_evu_block", text, sizeof(text));
+    CHECK_STR(text, "unavailable");
+}
+
+static void test_a_room_cannot_drive_evu_but_can_drive_indr_t(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"ThermIQ-room 2.68\", "
+                   "\"EVU\": 0, \"INDR_T\": 21.1}");
+    struct write_topics t = topics(false);
+    struct write_message message;
+    CHECK(state_encode_write(&state, &t, "heatpump_evu_block", 1, &message)
+          == WRITE_UNSUPPORTED);
+    CHECK(state_encode_write(&state, &t, "room_sensor_set_t", 21.0, &message) == WRITE_OK);
+}
+
+static void test_a_room2_drives_evu_before_sending_one(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"ThermIQ-room2 2.68\", "
+                   "\"d0\": 17}");
+    struct write_topics t = topics(false);
+    struct write_message message;
+    CHECK(state_encode_write(&state, &t, "heatpump_evu_block", 1, &message) == WRITE_OK);
+    /* Supported, but no value yet: Home Assistant shows such an entity as
+     * unknown rather than unavailable. */
+    char text[STATE_STRING_MAX];
+    entity(&state, "switch", "heatpump_evu_block", text, sizeof(text));
+    CHECK_STR(text, "unknown");
+}
+
+static void test_the_interface_match_ignores_case(void)
+{
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"THERMIQ-ROOM2 2.68\"}");
+    struct write_topics t = topics(false);
+    struct write_message message;
+    CHECK(state_encode_write(&state, &t, "heatpump_evu_block", 1, &message) == WRITE_OK);
+}
+
+static void test_an_unknown_interface_keeps_the_old_rule(void)
+{
+    /* Fail open: an interface ThermIQ ships later must not lose a working
+     * control for being absent from the table. Both directions, so falling
+     * back stays evidence rather than becoming a blanket yes. */
+    struct write_topics t = topics(false);
+    struct write_message message;
+
+    struct pump_state sends;
+    state_init(&sends, 120.0, 0);
+    ingest(&sends, "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"ThermIQ-room3 3.01\", "
+                   "\"EVU\": 1}");
+    CHECK(state_encode_write(&sends, &t, "heatpump_evu_block", 1, &message) == WRITE_OK);
+
+    struct pump_state silent;
+    state_init(&silent, 120.0, 0);
+    ingest(&silent, "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"ThermIQ-room3 3.01\", "
+                    "\"d0\": 17}");
+    CHECK(state_encode_write(&silent, &t, "heatpump_evu_block", 1, &message)
+          == WRITE_UNSUPPORTED);
+}
+
+static void test_a_malformed_app_info_keeps_the_old_rule(void)
+{
+    static const char *const payloads[] = {
+        "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": 12345, \"EVU\": 1}",
+        "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"\", \"EVU\": 1}",
+        "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"   \", \"EVU\": 1}",
+    };
+    struct write_topics t = topics(false);
+    struct write_message message;
+    for (size_t i = 0; i < sizeof(payloads) / sizeof(payloads[0]); i++) {
+        struct pump_state state;
+        state_init(&state, 120.0, 0);
+        ingest(&state, payloads[i]);
+        CHECK(state_encode_write(&state, &t, "heatpump_evu_block", 1, &message) == WRITE_OK);
+    }
+}
+
+static void test_indr_t_is_not_interface_gated(void)
+{
+    /* The mirror of the EVU case: a Room2 that has not sent INDR_T cannot
+     * drive it, because for INDR_T what the pump sends is the evidence. */
+    struct pump_state state;
+    state_init(&state, 120.0, 0);
+    ingest(&state, "{\"Client_Name\": \"ThermIQ_x\", \"app_info\": \"ThermIQ-room2 2.68\", "
+                   "\"EVU\": 0}");
+    struct write_topics t = topics(false);
+    struct write_message message;
+    CHECK(state_encode_write(&state, &t, "room_sensor_set_t", 21.0, &message)
+          == WRITE_UNSUPPORTED);
 }
 
 /* ---- the pool branch --------------------------------------------------- */
@@ -530,6 +649,13 @@ int main(void)
     test_plain_hardware_refuses_writes_it_cannot_perform();
     test_room2_accepts_the_writes_plain_hardware_cannot();
     test_unsupported_register_reads_as_unavailable();
+    test_modern_plain_mqtt_sends_evu_and_still_cannot_drive_it();
+    test_a_room_cannot_drive_evu_but_can_drive_indr_t();
+    test_a_room2_drives_evu_before_sending_one();
+    test_the_interface_match_ignores_case();
+    test_an_unknown_interface_keeps_the_old_rule();
+    test_a_malformed_app_info_keeps_the_old_rule();
+    test_indr_t_is_not_interface_gated();
     test_pool_branch_is_off_unless_configured();
     test_pool_branch_on_when_the_circuit_is_being_heated();
     test_pool_branch_off_below_the_curve_minimum();

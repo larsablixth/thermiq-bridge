@@ -1,5 +1,6 @@
 #include "state.h"
 
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -216,6 +217,71 @@ const struct reg_value *state_value(const struct pump_state *state,
     return &state->values[def->slot];
 }
 
+/* ---- what the hardware can drive -------------------------------------- */
+
+/* The interfaces whose capabilities are known, as app_info reports them,
+ * lowercased. Anything else is something ThermIQ has shipped since, and is
+ * deliberately not decided from this table. KNOWN_INTERFACES in the
+ * integration. */
+static const char *const known_interfaces[] = {"thermiq-mqtt", "thermiq-room",
+                                               "thermiq-room2"};
+
+/* Registers whose presence in /data does not prove the hardware can drive
+ * them, each with the known interface that can. INTERFACE_GATED in the
+ * integration. */
+static const struct {
+    const char *reg;
+    const char *interface;
+} interface_gated[] = {
+    {"evu", "thermiq-room2"},
+};
+
+/* The pump's interface from app_info, "ThermIQ-room2 2.68" -> "thermiq-room2".
+ * ThermIQ's build system generates that string, so unlike the MQTT node name
+ * no user can edit it. False until app_info has arrived as text with a token
+ * in it. */
+static bool pump_interface(const struct pump_state *state, char *out, size_t cap)
+{
+    int slot = reg_slot_of("app_info");
+    if (slot < 0 || state->values[slot].kind != VAL_TEXT || cap == 0)
+        return false;
+    const char *text = state->values[slot].text;
+    while (*text && isspace((unsigned char)*text))
+        text++;
+    size_t length = 0;
+    while (text[length] && !isspace((unsigned char)text[length]) && length + 1 < cap) {
+        out[length] = (char)tolower((unsigned char)text[length]);
+        length++;
+    }
+    out[length] = '\0';
+    return length > 0;
+}
+
+static bool is_known_interface(const char *interface)
+{
+    for (size_t i = 0; i < sizeof(known_interfaces) / sizeof(known_interfaces[0]); i++)
+        if (strcmp(interface, known_interfaces[i]) == 0)
+            return true;
+    return false;
+}
+
+bool state_supports(const struct pump_state *state, const struct reg_def *def)
+{
+    if (!def)
+        return false;
+    for (size_t i = 0; i < sizeof(interface_gated) / sizeof(interface_gated[0]); i++) {
+        if (strcmp(def->reg, interface_gated[i].reg) != 0)
+            continue;
+        char interface[VALUE_TEXT_MAX];
+        if (pump_interface(state, interface, sizeof(interface)) &&
+            is_known_interface(interface))
+            return strcmp(interface, interface_gated[i].interface) == 0;
+        break; /* unknown interface: what the pump sends decides after all */
+    }
+    const struct reg_value *seen = state_value(state, def);
+    return seen && seen->kind != VAL_NONE;
+}
+
 void state_set_number(struct pump_state *state, const struct reg_def *def, double value)
 {
     /* A written value arrives as a float, exactly as it does through a Home
@@ -297,12 +363,18 @@ void state_entity_string(const struct pump_state *state, const char *domain,
         return;
     }
 
+    if (!state_supports(state, def)) {
+        /* Messages are arriving and this hardware cannot drive the register.
+         * "unavailable" says that; "unknown" suggests a value is coming, and
+         * none ever will. */
+        snprintf(out, cap, "unavailable");
+        return;
+    }
     const struct reg_value *value = state_value(state, def);
     if (!value || value->kind == VAL_NONE) {
-        /* Messages are arriving and this register has never been in one, so
-         * the hardware does not have it. "unavailable" says that; "unknown"
-         * suggests a value is coming, and none ever will. */
-        snprintf(out, cap, "unavailable");
+        /* Hardware that can drive it, before the pump has reported it - a
+         * Room2 that has not sent EVU yet. Home Assistant says unknown. */
+        snprintf(out, cap, "unknown");
         return;
     }
 
@@ -433,8 +505,8 @@ const char *write_error_message(enum write_error error)
     case WRITE_READ_ONLY:
         return "the bridge is running in read-only mode";
     case WRITE_UNSUPPORTED:
-        return "this heat pump does not report that register, so it cannot "
-               "drive it (EVU needs a ThermIQ-Room2)";
+        return "this heat pump's hardware cannot drive that register "
+               "(EVU needs a ThermIQ-Room2)";
     }
     return "rejected";
 }
@@ -456,13 +528,10 @@ enum write_error state_encode_write(const struct pump_state *state,
         return WRITE_NO_DATA;
     if (reg_slot_of(def->reg) < 0)
         return WRITE_UNKNOWN_REGISTER;
-    /* What the pump sends is what it can act on. A register absent from every
-     * message so far belongs to hardware this pump does not have. */
-    {
-        const struct reg_value *seen = state_value(state, def);
-        if (!state->demo && (!seen || seen->kind == VAL_NONE))
-            return WRITE_UNSUPPORTED;
-    }
+    /* A write the hardware cannot act on is published and then ignored, which
+     * is worse than refusing it. See state_supports. */
+    if (!state->demo && !state_supports(state, def))
+        return WRITE_UNSUPPORTED;
 
     /* Validate the raw value, before the two's-complement conversion below:
      * a negative setpoint becomes a large positive number once masked, which
