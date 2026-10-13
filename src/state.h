@@ -63,6 +63,15 @@ int state_ingest(struct pump_state *state, char *payload, size_t len);
 
 const struct reg_value *state_value(const struct pump_state *state,
                                     const struct reg_def *def);
+
+/* True if this pump's hardware can act on the register - HeatPump.supports in
+ * the integration. Usually that is whether the pump has ever sent it. EVU is
+ * the exception: modern firmware sends it whether or not the hardware can
+ * drive it, so a known interface in app_info decides instead. An unknown
+ * interface falls back to what the pump sends, so a control is not withheld
+ * from hardware this table has not heard of. */
+bool state_supports(const struct pump_state *state, const struct reg_def *def);
+
 void state_set_number(struct pump_state *state, const struct reg_def *def, double value);
 /* Seed a value with an explicit int/float distinction. Only demo mode needs
  * this; real values carry the distinction from the payload. */
@@ -104,10 +113,10 @@ enum write_error {
     WRITE_UNKNOWN_OPTION,
     WRITE_NO_DATA,
     WRITE_READ_ONLY,
-    /* The pump has been talking, and has never once mentioned this register.
-     * EVU is ThermIQ-Room2 only and the room-sensor setpoint needs a Room or
-     * a Room2; on plain ThermIQ-MQTT hardware a write to either is published
-     * and then ignored, which is worse than refusing it. */
+    /* The hardware cannot act on this register; see state_supports. EVU is
+     * ThermIQ-Room2 only and the room-sensor setpoint needs a Room or a
+     * Room2; elsewhere a write to either is published and then ignored,
+     * which is worse than refusing it. */
     WRITE_UNSUPPORTED,
 };
 
