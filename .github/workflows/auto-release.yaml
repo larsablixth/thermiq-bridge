@@ -1,0 +1,58 @@
+name: Auto-release
+
+# Merging a version bump is the release. Whenever main carries an
+# addon/config.yaml version that has no tag yet, this tags it and hands the
+# tag to release.yaml.
+#
+# Without it, a merged bump sits on main untagged: the Supervisor reads
+# config.yaml off the default branch and offers that version to everyone,
+# while the image it would pull does not exist until somebody remembers to
+# push the tag by hand.
+#
+# A tag pushed with GITHUB_TOKEN does not start other workflows, so the tag
+# alone would not trigger release.yaml's `push: tags`. It is started with
+# workflow_dispatch instead, the one event GITHUB_TOKEN is allowed to raise.
+# Tagging by hand still works as before; this then finds the tag present and
+# does nothing.
+#
+# Pre-release tags stay manual: config.yaml never carries one.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # push the tag
+  actions: write # start release.yaml
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag the add-on version if it is not tagged yet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(grep -E '^version:' addon/config.yaml | cut -d'"' -f2)
+          tag="v$version"
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::addon/config.yaml version '$version' is not a stable X.Y.Z"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "$tag already exists, nothing to release"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "$(git log -1 --format=%s)"
+          git push origin "$tag"
+          gh workflow run release.yaml --ref "$tag" -f tag="$tag"
+          echo "tagged $tag at $(git rev-parse --short HEAD) and started release.yaml"

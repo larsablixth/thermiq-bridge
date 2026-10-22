@@ -1,5 +1,8 @@
 name: Release
 
+# Normally started by auto-release.yaml, which tags each new
+# addon/config.yaml version as it lands on main. Tagging by hand still works.
+#
 # Tag a version and this publishes it:
 #
 #   git tag -a v0.1.0 -m "..." && git push origin v0.1.0
